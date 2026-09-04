@@ -6,6 +6,24 @@
 
 ## 极空间 Q4 部署
 
+推荐直接运行 GitHub 自动构建的成品镜像，Q4 不需要安装依赖或现场编译：
+
+1. 在 Q4 创建 Compose 项目目录 `/M.2存储11/route-policy-hub`。
+2. 使用 `compose.prebuilt.yaml` 的内容创建项目。
+3. 勾选“添加.env”，由设备所有者亲自填写：
+
+   ```dotenv
+   ADMIN_PASSWORD=请设置一个仅用于分流清单的管理密码
+   ```
+
+4. 创建并启动后，访问 `http://192.168.5.7:8787`。
+
+每次推送到 `main`，GitHub Actions 都会重新构建多架构镜像并发布为
+`ghcr.io/pygmalion03/004-route-policy-hub:latest`。Q4 更新时只需重新拉取镜像并
+重建容器，`./data` 中的清单不会丢失。
+
+### 在 Q4 本地构建（备用）
+
 1. 将本目录上传到极空间，例如放到 `Docker/route-list`。
 2. 如需管理密码，将 `.env.example` 复制为 `.env`，并修改 `ADMIN_PASSWORD`。
 3. 在该目录执行：
