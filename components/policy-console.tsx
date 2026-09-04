@@ -76,6 +76,8 @@ export function PolicyConsole({
 }) {
   const [policies, setPolicies] = useState<Policy[]>(initialStore.policies);
   const policiesRef = useRef<Policy[]>(initialStore.policies);
+  const updatedAtRef = useRef(initialStore.updatedAt);
+  const savingRef = useRef(false);
   const [query, setQuery] = useState('');
   const [syncState, setSyncState] = useState<SyncState>('saved');
   const [updatedAt, setUpdatedAt] = useState(initialStore.updatedAt);
@@ -91,26 +93,56 @@ export function PolicyConsole({
     policiesRefForTools.current = policies;
   }, [policies]);
 
-  async function loadPolicies() {
-    setSyncState('loading');
-    setError('');
+  const loadPolicies = useCallback(async (showLoading = true) => {
+    if (savingRef.current) return;
+    if (showLoading) {
+      setSyncState('loading');
+      setError('');
+    }
     try {
       const response = await fetch('/api/policies', { cache: 'no-store' });
       const data = (await response.json()) as ApiStore & { error?: string };
       if (!response.ok) throw new Error(data.error || '读取清单失败');
-      setPolicies(data.policies);
-      setUpdatedAt(data.updatedAt);
+      if (data.updatedAt !== updatedAtRef.current) {
+        policiesRef.current = data.policies;
+        updatedAtRef.current = data.updatedAt;
+        setPolicies(data.policies);
+        setUpdatedAt(data.updatedAt);
+      }
       setRequiresPassword(Boolean(data.requiresPassword));
       setSyncState('saved');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '读取清单失败');
-      setSyncState('error');
+      if (showLoading) {
+        setError(cause instanceof Error ? cause.message : '读取清单失败');
+        setSyncState('error');
+      }
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => void loadPolicies(false);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    const interval = window.setInterval(refresh, 30_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [loadPolicies]);
 
   const persistPolicies = useCallback(
     async (nextPolicies: Policy[]) => {
+      if (savingRef.current) {
+        setError('正在同步上一项修改，请稍后再试');
+        throw new Error('正在同步上一项修改，请稍后再试');
+      }
       const previous = policiesRef.current;
+      const expectedUpdatedAt = updatedAtRef.current;
+      savingRef.current = true;
       policiesRef.current = nextPolicies;
       setPolicies(nextPolicies);
       setSyncState('saving');
@@ -126,13 +158,23 @@ export function PolicyConsole({
           },
           body: JSON.stringify({
             version: 1,
-            updatedAt,
+            updatedAt: expectedUpdatedAt,
             policies: nextPolicies,
           }),
         });
         const data = (await response.json()) as PolicyStore & { error?: string };
+        if (response.status === 409 && Array.isArray(data.policies)) {
+          policiesRef.current = data.policies;
+          updatedAtRef.current = data.updatedAt;
+          setPolicies(data.policies);
+          setUpdatedAt(data.updatedAt);
+          setError(data.error || '另一台设备刚刚修改了清单，已载入最新版本');
+          setSyncState('error');
+          return;
+        }
         if (!response.ok) throw new Error(data.error || '保存失败');
         policiesRef.current = data.policies;
+        updatedAtRef.current = data.updatedAt;
         setPolicies(data.policies);
         setUpdatedAt(data.updatedAt);
         setSyncState('saved');
@@ -141,9 +183,11 @@ export function PolicyConsole({
         setPolicies(previous);
         setError(cause instanceof Error ? cause.message : '保存失败');
         setSyncState('error');
+      } finally {
+        savingRef.current = false;
       }
     },
-    [password, updatedAt],
+    [password],
   );
 
   const visiblePolicies = useMemo(() => {
@@ -170,20 +214,25 @@ export function PolicyConsole({
   );
 
   function updatePolicy(id: string, patch: Partial<Policy>) {
+    if (savingRef.current) return;
     void persistPolicies(
-      policies.map((policy) =>
+      policiesRef.current.map((policy) =>
         policy.id === id ? { ...policy, ...patch } : policy,
       ),
     );
   }
 
   function addPolicy(policy: Policy) {
-    void persistPolicies([...policies, policy]);
+    if (savingRef.current) return;
+    void persistPolicies([...policiesRef.current, policy]);
     setAddOpen(false);
   }
 
   function deletePolicy(id: string) {
-    void persistPolicies(policies.filter((policy) => policy.id !== id));
+    if (savingRef.current) return;
+    void persistPolicies(
+      policiesRef.current.filter((policy) => policy.id !== id),
+    );
   }
 
   function savePassword(value: string) {
@@ -538,7 +587,7 @@ function SyncStatus({ state, updatedAt }: { state: SyncState; updatedAt: string 
   const content = {
     loading: { icon: <LoaderCircle className="size-4 animate-spin" />, label: '读取中', className: 'border-border bg-card text-muted-foreground' },
     saving: { icon: <RefreshCw className="size-4 animate-spin" />, label: '同步中', className: 'border-amber-200 bg-amber-50 text-amber-900' },
-    saved: { icon: <Check className="size-4" />, label: '规则已同步', className: 'border-emerald-200 bg-emerald-50 text-emerald-900' },
+    saved: { icon: <Check className="size-4" />, label: '已同步至所有设备', className: 'border-emerald-200 bg-emerald-50 text-emerald-900' },
     error: { icon: <RefreshCw className="size-4" />, label: '同步失败', className: 'border-red-200 bg-red-50 text-red-800' },
   }[state];
   const time = updatedAt ? new Date(updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';

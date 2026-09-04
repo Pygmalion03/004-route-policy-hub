@@ -33,6 +33,15 @@ export type PolicyStore = {
   policies: Policy[];
 };
 
+export class PolicyStoreConflictError extends Error {
+  constructor(public readonly currentStore: PolicyStore) {
+    super('清单已被其他设备更新');
+    this.name = 'PolicyStoreConflictError';
+  }
+}
+
+let pendingWrite: Promise<void> = Promise.resolve();
+
 const matcherTypes = new Set<MatcherType>([
   'DOMAIN',
   'DOMAIN-SUFFIX',
@@ -141,28 +150,45 @@ function dataFilePath() {
   };
 }
 
-export async function readPolicyStore(): Promise<PolicyStore> {
+async function readExistingPolicyStore(): Promise<PolicyStore | null> {
   const location = dataFilePath();
   try {
     const content = await readFile(/* turbopackIgnore: true */ location.file, 'utf8');
     return validateStore(JSON.parse(content));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    const store: PolicyStore = {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      policies: initialPolicies,
-    };
-    await writePolicyStore(store);
-    return store;
+    return null;
   }
 }
 
-export async function writePolicyStore(input: unknown): Promise<PolicyStore> {
+async function withWriteLock<T>(operation: () => Promise<T>): Promise<T> {
+  const previousWrite = pendingWrite;
+  let releaseWrite: () => void = () => {};
+  pendingWrite = new Promise<void>((resolve) => {
+    releaseWrite = () => resolve();
+  });
+  await previousWrite;
+  try {
+    return await operation();
+  } finally {
+    releaseWrite();
+  }
+}
+
+function nextUpdatedAt(previousUpdatedAt?: string) {
+  const now = Date.now();
+  const previous = previousUpdatedAt ? Date.parse(previousUpdatedAt) : Number.NaN;
+  return new Date(Number.isFinite(previous) && previous >= now ? previous + 1 : now).toISOString();
+}
+
+async function writePolicyStore(
+  input: unknown,
+  previousUpdatedAt?: string,
+): Promise<PolicyStore> {
   const store = validateStore(input);
   const nextStore: PolicyStore = {
     ...store,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextUpdatedAt(previousUpdatedAt),
   };
   const location = dataFilePath();
   const temporaryFile = `${location.file}.${process.pid}.tmp`;
@@ -170,6 +196,32 @@ export async function writePolicyStore(input: unknown): Promise<PolicyStore> {
   await writeFile(temporaryFile, `${JSON.stringify(nextStore, null, 2)}\n`, 'utf8');
   await rename(temporaryFile, location.file);
   return nextStore;
+}
+
+export async function readPolicyStore(): Promise<PolicyStore> {
+  const existingStore = await readExistingPolicyStore();
+  if (existingStore) return existingStore;
+
+  return withWriteLock(async () => {
+    const storeCreatedByAnotherRequest = await readExistingPolicyStore();
+    if (storeCreatedByAnotherRequest) return storeCreatedByAnotherRequest;
+    return writePolicyStore({
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      policies: initialPolicies,
+    });
+  });
+}
+
+export async function savePolicyStore(input: unknown): Promise<PolicyStore> {
+  const candidate = validateStore(input);
+  return withWriteLock(async () => {
+    const currentStore = await readExistingPolicyStore();
+    if (currentStore && candidate.updatedAt !== currentStore.updatedAt) {
+      throw new PolicyStoreConflictError(currentStore);
+    }
+    return writePolicyStore(candidate, currentStore?.updatedAt);
+  });
 }
 
 export function validateStore(input: unknown): PolicyStore {
@@ -224,7 +276,7 @@ export function policyToYaml(store: PolicyStore, action: PolicyAction) {
       `  # ${policy.name}`,
       ...policy.matchers.map((matcher) => {
         const suffix = matcher.noResolve ? ',no-resolve' : '';
-        return `  - ${matcher.type},${matcher.value}${suffix}`;
+        return `  - ${JSON.stringify(`${matcher.type},${matcher.value}${suffix}`)}`;
       }),
     ]);
   if (lines.length === 0) {
