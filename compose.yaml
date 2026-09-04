@@ -1,0 +1,12 @@
+services:
+  route-list:
+    build: .
+    container_name: route-list
+    restart: unless-stopped
+    ports:
+      - "8787:3000"
+    environment:
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
+      DATA_DIR: /app/data
+    volumes:
+      - ./data:/app/data
