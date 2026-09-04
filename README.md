@@ -22,6 +22,10 @@
 `ghcr.io/pygmalion03/004-route-policy-hub:latest`。Q4 更新时只需重新拉取镜像并
 重建容器，`./data` 中的清单不会丢失。
 
+Q4 创建的项目目录默认不允许镜像内的普通用户写入，因此预构建配置仅对这个
+受限容器使用 `user: "0:0"`。容器仍为只读根文件系统、移除全部 Linux capabilities，
+并只能持久写入项目的 `./data` 目录。
+
 ### 在 Q4 本地构建（备用）
 
 1. 将本目录上传到极空间，例如放到 `Docker/route-list`。

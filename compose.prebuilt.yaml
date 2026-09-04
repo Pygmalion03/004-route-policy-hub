@@ -2,6 +2,9 @@ services:
   route-policy-hub:
     image: ghcr.io/pygmalion03/004-route-policy-hub:latest
     container_name: route-policy-hub
+    # Q4 bind-mounted project folders are not writable by the image's UID 1001.
+    # The remaining restrictions keep the container's root filesystem read-only.
+    user: "0:0"
     restart: unless-stopped
     init: true
     read_only: true
