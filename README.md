@@ -14,6 +14,14 @@
    docker compose up -d --build
    ```
 
+   如果 NAS 无法直接访问 Docker Hub，可在构建时指定镜像前缀，而无需修改
+   Docker 的全局设置：
+
+   ```bash
+   docker compose build --build-arg NODE_IMAGE=m.daocloud.io/docker.io/library/node:22-bookworm-slim
+   docker compose up -d
+   ```
+
 4. 家中访问 `http://极空间局域网IP:8787`；外出时使用 `http://极空间Tailscale地址:8787`。
 
 数据保存在 `./data/policies.json`。更新容器不会覆盖该文件，备份这个目录即可保留清单。

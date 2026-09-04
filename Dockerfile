@@ -1,4 +1,6 @@
-FROM node:22-bookworm-slim AS dependencies
+ARG NODE_IMAGE=node:22-bookworm-slim
+
+FROM ${NODE_IMAGE} AS dependencies
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
@@ -10,7 +12,7 @@ FROM dependencies AS builder
 COPY . .
 RUN pnpm build
 
-FROM node:22-bookworm-slim AS runner
+FROM ${NODE_IMAGE} AS runner
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
