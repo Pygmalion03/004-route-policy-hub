@@ -18,7 +18,7 @@
 
 4. 创建并启动后，访问 `http://192.168.5.7:8787`。
 
-每次推送到 `main`，GitHub Actions 都会重新构建多架构镜像并发布为
+每次推送到 `main`，GitHub Actions 都会重新构建适用于 Q4 的 AMD64 镜像并发布为
 `ghcr.io/pygmalion03/004-route-policy-hub:latest`。Q4 更新时只需重新拉取镜像并
 重建容器，`./data` 中的清单不会丢失。
 
