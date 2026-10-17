@@ -1,7 +1,7 @@
 # 连接管理部署记录
 
 - 源码分支：`codex/connection-management`。
-- 已部署镜像：`ghcr.io/pygmalion03/004-route-policy-hub:sha-3546242`（linux/amd64）。
+- 已部署镜像：`ghcr.io/pygmalion03/004-route-policy-hub:sha-3ee0d6d`（linux/amd64）。
 - NAS：沿用 `/M.2存储11/route-policy-hub`、私有数据目录与现有管理密码。
 - LAN 管理页面：`http://192.168.5.7:8787/connections`。
 - 独立配置存于 `DATA_DIR/connections.json`，仅包含实际部署环境的数据，不纳入 Git。
@@ -48,3 +48,18 @@
 4. 不因数据库评分自动更换 Webshare IP；当前 IP 未更换，用户稍后自行决定。
 
 回滚：在 Clash 激活原本地「日常 · Webshare 固定美国」配置；如需回滚服务，恢复之前 NAS 镜像，保留持久化目录。既有 Tunnel 的其他应用路由没有修改。
+
+## 同日布局更新
+
+- 部署源码 `3ee0d6d`，镜像构建 run `39058583593` 成功；NAS 只修改镜像标签，Compose 其他配置及持久化目录保留。
+- 三个统一入口：`/` 使用概览、`/connections` 摘要式连接配置、`/policies` 分流规则。
+- 连接参数按需展开编辑；解锁后收起密码表单，同一标签页跨页沿用会话；保存栏固定可见。
+- 概览显示已保存配置与机场缓存状态；不声称知道本机实时出口或节点，也不声称所有客户端已同步。
+- 补充机场 / 地区切换、换 IP、NAS / Cloudflare 分工、更新周期和风险评分的操作说明。
+- 修复中文规则名称生成不符合服务端校验的 ID，中文名称实际经页面保存并出现在规则端点（本地隔离数据）验收通过。
+- `pnpm lint`、`pnpm build` 通过；浏览器验证桌面与 390px 手机布局、跨页解锁、展开编辑和保存。
+- NAS 真实环境：认证读取与原值保存均为 200，未认证写入为 401，规则 payload 与持久化清单一致。
+- 公网无 Cookie 验收：首页、连接页、规则管理页和连接 API 均跳转 Access；两个只读规则地址 200；订阅无 / 错误令牌 401、正确令牌 200。
+- 未改动 Clash 或 Magpie 设置；固定 AI 端口真实出口请求 200 / 1.57 秒，保持原 Webshare 出口。
+- 正式首页截图：本机忽略目录 `outputs/layout-overview-public-full.png`。
+- 拼好连上游 403 仍待用户提供有效订阅地址；当前缓存节点保留。Webshare IP 未更换，实际 Claude 账号生成仍未验收。
