@@ -1,14 +1,5 @@
-import { PolicyConsole } from '@/components/policy-console';
-import { readPolicyStore } from '@/lib/policies';
+import { ConnectionConsole } from '@/components/connection-console';
 
-export const dynamic = 'force-dynamic';
-
-export default async function Home() {
-  const store = await readPolicyStore();
-  return (
-    <PolicyConsole
-      initialStore={store}
-      initialRequiresPassword={Boolean(process.env.ADMIN_PASSWORD)}
-    />
-  );
+export default function Home() {
+  return <ConnectionConsole overview />;
 }

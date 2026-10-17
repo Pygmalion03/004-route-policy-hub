@@ -16,7 +16,6 @@ import {
   Copy,
   KeyRound,
   LoaderCircle,
-  Network,
   Plus,
   RefreshCw,
   Search,
@@ -25,7 +24,7 @@ import {
   Trash2,
 } from 'lucide-react';
 
-import Link from 'next/link';
+import { HubNav } from '@/components/hub-nav';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -245,28 +244,19 @@ export function PolicyConsole({
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <HubNav active="policies" />
       <div className="mx-auto w-full max-w-[1180px] px-4 py-5 sm:px-7 sm:py-8">
         <header className="flex flex-col gap-5 border-b border-border/80 pb-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_24px_rgba(15,76,66,0.18)]">
-              <Network className="size-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-semibold tracking-[-0.02em]">分流清单</h1>
-                <Badge className="bg-emerald-100 text-emerald-800">私人</Badge>
-              </div>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                一处修改，所有设备使用同一决定
-              </p>
-            </div>
+          <div>
+            <p className="mb-2 text-xs font-medium tracking-widest text-primary">按需直连</p>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">分流规则</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">默认使用固定出口。需要直连的国内网站，在这里添加域名。</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {requiresPassword && (
               <PasswordControl password={password} onSave={savePassword} />
             )}
-            <Link href="/connections" className="rounded-lg border bg-card px-3 py-2 text-sm font-medium">机场与 Webshare</Link>
             <SyncStatus state={syncState} updatedAt={updatedAt} />
           </div>
         </header>
@@ -286,21 +276,21 @@ export function PolicyConsole({
             icon={<ShieldCheck className="size-4" />}
             label="直连"
             value={counts.DIRECT}
-            note="本地与低延迟流量"
+            note="启用的直连条目"
             tone="direct"
           />
           <SummaryCard
             icon={<Cloud className="size-4" />}
             label="代理"
             value={counts.PROXY}
-            note="有出口地区要求"
+            note="明确指定固定出口"
             tone="proxy"
           />
           <SummaryCard
             icon={<CircleGauge className="size-4" />}
             label="清单"
             value={policies.length}
-            note="统一供所有设备获取"
+            note="包含已停用条目"
             tone="neutral"
           />
         </section>
@@ -308,9 +298,9 @@ export function PolicyConsole({
         <section className="overflow-hidden rounded-[22px] border border-border bg-card shadow-[0_18px_60px_rgba(32,48,44,0.06)]">
           <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div>
-              <h2 className="font-semibold tracking-[-0.01em]">统一决定</h2>
+              <h2 className="font-semibold tracking-[-0.01em]">网站与应用清单</h2>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                系统差异由工具内部处理，默认无需区分设备
+                输入域名即可添加；应用与网络规则也保留在同一清单
               </p>
             </div>
             <div className="flex gap-2">
@@ -326,7 +316,7 @@ export function PolicyConsole({
               </div>
               <Button size="lg" className="h-9 px-3.5" onClick={() => setAddOpen(true)}>
                 <Plus data-icon="inline-start" />
-                添加
+                添加域名 / 规则
               </Button>
             </div>
           </div>
@@ -361,11 +351,11 @@ export function PolicyConsole({
           <footer className="flex flex-col gap-3 border-t border-border bg-muted/25 px-4 py-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <p className="flex items-center gap-2 text-muted-foreground">
               <Sparkles className="size-4 text-amber-600" />
-              保存后，Clash 会在下次更新时自动获取
+              保存到 NAS 后，日常配置约五分钟获取规则
             </p>
             <Button variant="outline" className="bg-background" onClick={() => { setOrigin(window.location.origin); setIntegrationOpen(true); }}>
               <Code2 data-icon="inline-start" />
-              Clash 接入方式
+              其他客户端接入
             </Button>
           </footer>
         </section>
@@ -465,7 +455,7 @@ function AddPolicyDialog({
     if (!name.trim() || matcherValues.length === 0) return;
     const idBase = name
       .toLowerCase()
-      .replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-')
+      .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
       .slice(0, 50);
     onAdd({
@@ -490,7 +480,7 @@ function AddPolicyDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>添加一项决定</DialogTitle>
+          <DialogTitle>添加域名或规则</DialogTitle>
           <DialogDescription>网站、应用和网络都放在同一份清单中。</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-1">
@@ -527,7 +517,7 @@ function AddPolicyDialog({
         </div>
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>取消</DialogClose>
-          <Button onClick={submit} disabled={!name.trim() || !values.trim()}>添加并同步</Button>
+          <Button onClick={submit} disabled={!name.trim() || !values.trim()}>添加并保存</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -536,14 +526,14 @@ function AddPolicyDialog({
 
 function IntegrationDialog({ open, onOpenChange, origin }: { open: boolean; onOpenChange: (open: boolean) => void; origin: string }) {
   const [proxyGroup, setProxyGroup] = useState('PROXY');
-  const snippet = `# ① Clash Verge Rev：扩展配置（Merge）\nrule-providers:\n  my-direct:\n    type: http\n    behavior: classical\n    format: yaml\n    url: "${origin}/rules/direct.yaml"\n    path: ./rule-providers/my-direct.yaml\n    interval: 3600\n    proxy: DIRECT\n  my-proxy:\n    type: http\n    behavior: classical\n    format: yaml\n    url: "${origin}/rules/proxy.yaml"\n    path: ./rule-providers/my-proxy.yaml\n    interval: 3600\n    proxy: DIRECT\n\n# ② Clash Verge Rev：规则配置（Rules）\nprepend:\n  - "RULE-SET,my-direct,DIRECT"\n  - "RULE-SET,my-proxy,${proxyGroup || 'PROXY'}"\nappend: []\ndelete: []`;
+  const snippet = `# ① Clash Verge Rev：扩展配置（Merge）\nrule-providers:\n  my-direct:\n    type: http\n    behavior: classical\n    format: yaml\n    url: "${origin}/rules/direct.yaml"\n    path: ./rule-providers/my-direct.yaml\n    interval: 300\n    proxy: DIRECT\n  my-proxy:\n    type: http\n    behavior: classical\n    format: yaml\n    url: "${origin}/rules/proxy.yaml"\n    path: ./rule-providers/my-proxy.yaml\n    interval: 300\n    proxy: DIRECT\n\n# ② Clash Verge Rev：规则配置（Rules）\nprepend:\n  - "RULE-SET,my-direct,DIRECT"\n  - "RULE-SET,my-proxy,${proxyGroup || 'PROXY'}"\nappend: []\ndelete: []`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>让 Clash 自动获取</DialogTitle>
-          <DialogDescription>分别加入当前订阅的“扩展配置”和“规则配置”；规则每小时更新一次。</DialogDescription>
+          <DialogDescription>当前「日常 · 域名管理 · Webshare」已接入，无需再添加。其他配置可引用以下规则，约五分钟更新。</DialogDescription>
         </DialogHeader>
         <label htmlFor="proxy-group" className="grid gap-1.5 text-sm font-medium">
           你的代理策略组名称
@@ -566,7 +556,7 @@ function PasswordControl({ password, onSave }: { password: string; onSave: (pass
   return (
     <>
       <Button variant="outline" className="bg-card" onClick={() => { setDraft(window.sessionStorage.getItem('route-list-password') || password); setOpen(true); }}>
-        <KeyRound /> {password ? '已解锁编辑' : '解锁编辑'}
+        <KeyRound /> 编辑权限
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -588,9 +578,9 @@ function PasswordControl({ password, onSave }: { password: string; onSave: (pass
 function SyncStatus({ state, updatedAt }: { state: SyncState; updatedAt: string }) {
   const content = {
     loading: { icon: <LoaderCircle className="size-4 animate-spin" />, label: '读取中', className: 'border-border bg-card text-muted-foreground' },
-    saving: { icon: <RefreshCw className="size-4 animate-spin" />, label: '同步中', className: 'border-amber-200 bg-amber-50 text-amber-900' },
-    saved: { icon: <Check className="size-4" />, label: '已同步至所有设备', className: 'border-emerald-200 bg-emerald-50 text-emerald-900' },
-    error: { icon: <RefreshCw className="size-4" />, label: '同步失败', className: 'border-red-200 bg-red-50 text-red-800' },
+    saving: { icon: <RefreshCw className="size-4 animate-spin" />, label: '保存中', className: 'border-amber-200 bg-amber-50 text-amber-900' },
+    saved: { icon: <Check className="size-4" />, label: '已保存到 NAS', className: 'border-emerald-200 bg-emerald-50 text-emerald-900' },
+    error: { icon: <RefreshCw className="size-4" />, label: '保存失败', className: 'border-red-200 bg-red-50 text-red-800' },
   }[state];
   const time = updatedAt ? new Date(updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
   return (

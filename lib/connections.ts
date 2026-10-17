@@ -34,7 +34,7 @@ export function publicConnections(store: ConnectionStore | null) {
   return {
     configured: true, updatedAt: store.updatedAt,
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
-    airports: store.airports.map(({ id, name, refreshedAt, refreshError }) => ({ id, name, url: '', hasUrl: true, refreshedAt, refreshError })),
+    airports: store.airports.map(({ id, name, nodes, refreshedAt, refreshError }) => ({ id, name, nodeCount: nodes.length, url: '', hasUrl: true, refreshedAt, refreshError })),
   };
 }
 function text(value: unknown, label: string, max = 1000) {

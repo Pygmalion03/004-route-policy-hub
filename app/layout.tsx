@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '分流清单',
-  description: '统一管理并同步 Mihomo / Clash 分流决定',
+  title: '网络管理 · 固定出口与分流',
+  description: '维护机场、Webshare 固定出口与 Clash 分流规则',
 };
 
 export default function RootLayout({
