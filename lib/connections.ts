@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parse } from 'yaml';
 import { readPolicyStore } from './policies';
+import { parseVpsLink, type VpsNode } from './vps';
 
 type Node = Record<string, unknown> & { name: string };
 export type Endpoint = { server: string; port: number; type: 'http' | 'socks5'; username: string; password: string };
@@ -11,6 +12,7 @@ export type ConnectionStore = {
   version: 1; updatedAt: string; token: string;
   webshare: { direct: Endpoint; backbone: Endpoint };
   airports: Airport[];
+  vpsNodes?: VpsNode[];
   defaults: Record<string, unknown>;
 };
 const location = () => path.join(process.env.DATA_DIR || path.join(process.cwd(), 'data'), 'connections.json');
@@ -35,6 +37,7 @@ export function publicConnections(store: ConnectionStore | null) {
     configured: true, updatedAt: store.updatedAt,
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
     airports: store.airports.map(({ id, name, nodes, refreshedAt, refreshError }) => ({ id, name, nodeCount: nodes.length, url: '', hasUrl: true, refreshedAt, refreshError })),
+    vpsNodes: (store.vpsNodes || []).map(({ id, name, node }) => ({ id, name, server: node.server, port: node.port, type: node.type, hasConfig: true, shareUrl: '' })),
   };
 }
 function text(value: unknown, label: string, max = 1000) {
@@ -63,9 +66,21 @@ export async function saveConnections(input: unknown) {
   const operation = pending.catch(() => {}).then(async () => {
     const current = await readConnections();
     if (!current) throw new Error('请先导入本机已验证的配置');
-    const value = input as { updatedAt: string; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[] };
+    const value = input as { updatedAt: string; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
     if (value.updatedAt !== current.updatedAt) throw new Error('配置已被其他页面修改，请重新读取后再保存');
-    if (!Array.isArray(value.airports) || !value.airports.length || value.airports.length > 10) throw new Error('请保留 1 至 10 个机场');
+    const vpsInput = value.vpsNodes ?? current.vpsNodes?.map(v => ({ id: v.id, name: v.name, shareUrl: '' })) ?? [];
+    if (!Array.isArray(vpsInput) || vpsInput.length > 10) throw new Error('自建 VPS 数量不能超过 10 个');
+    const vpsIds = new Set<string>(), vpsNames = new Set<string>();
+    const vpsNodes: VpsNode[] = vpsInput.map(item => {
+      const id = text(item.id, 'VPS 标识', 80), name = text(item.name, 'VPS 名称', 40);
+      if (!/^[a-z0-9-]+$/.test(id) || vpsIds.has(id) || vpsNames.has(name) || /[,|]/.test(name)) throw new Error('VPS 名称或标识重复、无效');
+      vpsIds.add(id); vpsNames.add(name);
+      const previous = current.vpsNodes?.find(v => v.id === id);
+      const node = item.shareUrl?.trim() ? parseVpsLink(item.shareUrl.trim(), name) : previous?.node;
+      if (!node) throw new Error('新 VPS 需要填写代理节点链接，SSH 地址不能直接作为代理使用');
+      return { id, name, node: { ...node, name } };
+    });
+    if (!Array.isArray(value.airports) || value.airports.length > 10 || (!value.airports.length && !vpsNodes.length)) throw new Error('请至少保留一个机场或自建 VPS');
     const names = new Set<string>();
     const ids = new Set<string>();
     const airports: Airport[] = [];
@@ -74,7 +89,7 @@ export async function saveConnections(input: unknown) {
       if (!/^[a-z0-9-]+$/.test(id) || ids.has(id)) throw new Error('机场标识无效或重复');
       ids.add(id);
       const name = text(item.name, '机场名称', 40);
-      if (names.has(name) || ['固定出口', '前置机场', '订阅更新通道'].includes(name) || /[,|]/.test(name)) throw new Error('机场名称重复或包含保留字符');
+      if (names.has(name) || ['固定出口', '前置机场', '前置线路', '出口模式', 'VPS 直出', '机场直出', '自建 VPS', '订阅更新通道'].includes(name) || /[,|]/.test(name)) throw new Error('机场名称重复或包含保留字符');
       names.add(name);
       const previous = current.airports.find((airport) => airport.id === id);
       const url = item.url?.trim() || previous?.url;
@@ -95,7 +110,7 @@ export async function saveConnections(input: unknown) {
       if (typeof password !== 'string' || !password || password.length > 1000) throw new Error('代理密码无效');
       webshare[key] = { server, port, type: endpoint.type, username, password };
     }
-    const next: ConnectionStore = { ...current, airports, webshare, updatedAt: new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString() };
+    const next: ConnectionStore = { ...current, airports, vpsNodes, webshare, updatedAt: new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString() };
     await writeConnections(next);
     return next;
   });
@@ -132,7 +147,9 @@ export async function refreshConnections() {
 export async function generateConfiguration(store: ConnectionStore, origin: string) {
   const proxies: Record<string, unknown>[] = [];
   const exitNames = [`Webshare Direct ${store.webshare.direct.type.toUpperCase()}`, `Webshare Backbone ${store.webshare.backbone.type.toUpperCase()}`];
-  for (const [index, key] of (['direct', 'backbone'] as const).entries()) proxies.push({ ...store.webshare[key], name: exitNames[index], 'dialer-proxy': '前置机场' });
+  for (const [index, key] of (['direct', 'backbone'] as const).entries()) proxies.push({ ...store.webshare[key], name: exitNames[index], 'dialer-proxy': '前置线路' });
+  const vpsNodes = store.vpsNodes || [];
+  proxies.push(...vpsNodes.map(v => ({ ...v.node, name: `自建 VPS｜${v.name}` })));
   const providers = Object.fromEntries(store.airports.map((airport) => [airport.id, {
     type: 'inline', payload: airport.nodes,
     override: { 'additional-prefix': `${airport.name}｜` },
@@ -140,8 +157,11 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     'health-check': { enable: false, url: 'https://www.gstatic.com/generate_204', interval: 600, lazy: true },
   }]));
   const groups = [
+    { name: '出口模式', type: 'select', proxies: ['固定出口', ...(vpsNodes.length ? ['VPS 直出'] : []), ...(store.airports.length ? ['机场直出'] : [])] },
     { name: '固定出口', type: 'select', proxies: exitNames },
-    { name: '前置机场', type: 'select', proxies: store.airports.map((a) => `${a.name}节点`) },
+    { name: '前置线路', type: 'select', proxies: [...(store.airports.length ? ['前置机场'] : []), ...(vpsNodes.length ? ['自建 VPS'] : [])] },
+    ...(store.airports.length ? [{ name: '前置机场', type: 'select', proxies: store.airports.map((a) => `${a.name}节点`) }, { name: '机场直出', type: 'select', proxies: ['前置机场'] }] : []),
+    ...(vpsNodes.length ? [{ name: '自建 VPS', type: 'select', proxies: vpsNodes.map(v => `自建 VPS｜${v.name}`) }, { name: 'VPS 直出', type: 'select', proxies: ['自建 VPS'] }] : []),
     ...store.airports.map((a) => ({ name: `${a.name}节点`, type: 'select', use: [a.id] })),
   ];
   const policy = await readPolicyStore();
@@ -156,11 +176,11 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     `hub-${action}`, { type: 'http', behavior: 'classical', format: 'yaml', url: `${origin}/rules/${action}.yaml`, path: `./rule_providers/hub-${action}.yaml`, interval: 300, proxy: 'DIRECT', payload: policy.policies.filter(p => p.enabled && p.action === action.toUpperCase()).flatMap(p => p.matchers.map(m => `${m.type},${m.value}${m.noResolve ? ',no-resolve' : ''}`)) },
   ]));
   return {
-    ...store.defaults, 'mixed-port': 7897, 'allow-lan': false, mode: 'rule', 'log-level': 'warning', ipv6: false,
+    ...JSON.parse(JSON.stringify(store.defaults).replaceAll('#固定出口', '#出口模式')), 'mixed-port': 7897, 'allow-lan': false, mode: 'rule', 'log-level': 'warning', ipv6: false,
     profile: { 'store-selected': true },
     proxies, 'proxy-providers': providers, 'proxy-groups': groups,
-    listeners: [{ name: '固定 AI 出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '固定出口' }],
+    listeners: [{ name: 'AI 专用出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '出口模式' }],
     'rule-providers': ruleProviders,
-    rules: [...privateRules, 'RULE-SET,hub-proxy,固定出口', 'RULE-SET,hub-direct,DIRECT', 'MATCH,固定出口'],
+    rules: [...privateRules, 'RULE-SET,hub-proxy,出口模式', 'RULE-SET,hub-direct,DIRECT', 'MATCH,出口模式'],
   };
 }
