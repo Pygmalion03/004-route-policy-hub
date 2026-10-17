@@ -6,7 +6,7 @@ import { readPolicyStore } from './policies';
 
 type Node = Record<string, unknown> & { name: string };
 export type Endpoint = { server: string; port: number; type: 'http' | 'socks5'; username: string; password: string };
-type Airport = { id: string; name: string; url: string; nodes: Node[]; bootstrap: Node };
+type Airport = { id: string; name: string; url: string; nodes: Node[]; refreshedAt?: string; refreshError?: string };
 export type ConnectionStore = {
   version: 1; updatedAt: string; token: string;
   webshare: { direct: Endpoint; backbone: Endpoint };
@@ -34,16 +34,16 @@ export function publicConnections(store: ConnectionStore | null) {
   return {
     configured: true, updatedAt: store.updatedAt,
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
-    airports: store.airports.map(({ id, name }) => ({ id, name, url: '', hasUrl: true })),
+    airports: store.airports.map(({ id, name, refreshedAt, refreshError }) => ({ id, name, url: '', hasUrl: true, refreshedAt, refreshError })),
   };
 }
 function text(value: unknown, label: string, max = 1000) {
   if (typeof value !== 'string' || !value.trim() || value.length > max || (/[\r\n]/.test(value) || value.includes(String.fromCharCode(0)))) throw new Error(`${label}无效`);
   return value.trim();
 }
-async function downloadAirport(url: string) {
+async function downloadAirport(url: string, timeoutMs = 20000) {
   let result: Response;
-  try { result = await fetch(url, { signal: AbortSignal.timeout(20000), headers: { 'user-agent': 'clash-verge/2.5.8' }, cache: 'no-store' }); }
+  try { result = await fetch(url, { signal: AbortSignal.timeout(timeoutMs), headers: { 'user-agent': 'clash-verge/2.5.8' }, cache: 'no-store' }); }
   catch { throw new Error('机场订阅下载失败，请确认 NAS 能访问该订阅地址'); }
   if (!result.ok) throw new Error(`机场订阅返回 HTTP ${result.status}`);
   const body = await result.text();
@@ -80,8 +80,7 @@ export async function saveConnections(input: unknown) {
       const url = item.url?.trim() || previous?.url;
       if (!url || !['http:', 'https:'].includes(new URL(url).protocol)) throw new Error('请填写 HTTP(S) 机场订阅地址');
       const nodes = previous?.url === url ? previous.nodes : await downloadAirport(url);
-      const bootstrap = previous?.url === url ? previous.bootstrap : nodes[0];
-      airports.push({ id, name, url, nodes, bootstrap });
+      airports.push({ id, name, url, nodes, refreshedAt: previous?.url === url ? previous.refreshedAt : new Date().toISOString(), refreshError: previous?.url === url ? previous.refreshError : undefined });
     }
     const webshare = {} as ConnectionStore['webshare'];
     for (const key of ['direct', 'backbone'] as const) {
@@ -110,13 +109,32 @@ export async function writeConnections(store: ConnectionStore) {
   await writeFile(temporary, JSON.stringify(store), { mode: 0o600 });
   await rename(temporary, file);
 }
+// Serialize refreshes with edits so a slow upstream download cannot overwrite a newer form save.
+export async function refreshConnections() {
+  const operation = pending.catch(() => {}).then(async () => {
+    const current = await readConnections();
+    if (!current) return null;
+    let changed = false;
+    const airports = await Promise.all(current.airports.map(async airport => {
+      if (airport.refreshedAt && Date.now() - Date.parse(airport.refreshedAt) < 3600000) return airport;
+      changed = true;
+      try { return { ...airport, nodes: await downloadAirport(airport.url, 8000), refreshedAt: new Date().toISOString(), refreshError: undefined }; }
+      catch { return { ...airport, refreshedAt: new Date().toISOString(), refreshError: '最近更新失败，继续使用上次成功的节点；下一小时再更新。' }; }
+    }));
+    if (!changed) return current;
+    const next = { ...current, airports, updatedAt: new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString() };
+    await writeConnections(next);
+    return next;
+  });
+  pending = operation;
+  return operation;
+}
 export async function generateConfiguration(store: ConnectionStore, origin: string) {
-  const proxies: Record<string, unknown>[] = store.airports.map((airport) => ({ ...airport.bootstrap, name: `订阅更新｜${airport.id}` }));
+  const proxies: Record<string, unknown>[] = [];
   const exitNames = [`Webshare Direct ${store.webshare.direct.type.toUpperCase()}`, `Webshare Backbone ${store.webshare.backbone.type.toUpperCase()}`];
   for (const [index, key] of (['direct', 'backbone'] as const).entries()) proxies.push({ ...store.webshare[key], name: exitNames[index], 'dialer-proxy': '前置机场' });
   const providers = Object.fromEntries(store.airports.map((airport) => [airport.id, {
-    type: 'http', url: airport.url, path: `./proxy_providers/route-hub-${airport.id}.yaml`, interval: 86400,
-    proxy: '订阅更新通道', payload: airport.nodes,
+    type: 'inline', payload: airport.nodes,
     override: { 'additional-prefix': `${airport.name}｜` },
     'exclude-filter': '剩余流量|套餐到期|官网|TG群|有超时',
     'health-check': { enable: false, url: 'https://www.gstatic.com/generate_204', interval: 600, lazy: true },
@@ -125,7 +143,6 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     { name: '固定出口', type: 'select', proxies: exitNames },
     { name: '前置机场', type: 'select', proxies: store.airports.map((a) => `${a.name}节点`) },
     ...store.airports.map((a) => ({ name: `${a.name}节点`, type: 'select', use: [a.id] })),
-    { name: '订阅更新通道', type: 'select', hidden: true, proxies: store.airports.map((a) => `订阅更新｜${a.id}`) },
   ];
   const policy = await readPolicyStore();
   const privateRules = [

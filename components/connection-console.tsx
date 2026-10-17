@@ -11,7 +11,7 @@ import type { Endpoint } from '@/lib/connections';
 type View = {
   configured: boolean; updatedAt: string;
   webshare: { direct: Endpoint & { hasPassword?: boolean }; backbone: Endpoint & { hasPassword?: boolean } };
-  airports: { id: string; name: string; url: string; hasUrl?: boolean }[];
+  airports: { id: string; name: string; url: string; hasUrl?: boolean; refreshedAt?: string; refreshError?: string }[];
 };
 export function ConnectionConsole() {
   const [password, setPassword] = useState('');
@@ -71,11 +71,12 @@ export function ConnectionConsole() {
       {message && <output className="mb-6 rounded-xl border bg-card px-4 py-3 text-sm leading-6">{message}</output>}
       {data?.configured && <>
         <section className="mb-6 rounded-2xl border bg-card p-5 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">前置机场</h2><p className="mt-1 text-sm text-muted-foreground">换订阅时粘贴新地址；留空保留原地址。新地址需使用 Clash / Mihomo 格式。</p></div><Button variant="outline" onClick={() => { setData({ ...data, airports: [...data.airports, { id: `airport-${crypto.randomUUID()}`, name: '', url: '' }] }); setDirty(true); }}><Plus className="size-4" />添加机场</Button></div>
+          <div className="mb-5 flex items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">前置机场</h2><p className="mt-1 text-sm text-muted-foreground">换订阅时粘贴新地址；留空保留原地址。新地址需使用 Clash / Mihomo 格式。节点随 Clash 配置每小时更新。</p></div><Button variant="outline" onClick={() => { setData({ ...data, airports: [...data.airports, { id: `airport-${crypto.randomUUID()}`, name: '', url: '' }] }); setDirty(true); }}><Plus className="size-4" />添加机场</Button></div>
           <div className="space-y-4">{data.airports.map((airport, index) => <div key={airport.id} className="grid gap-3 rounded-xl bg-muted/50 p-4 sm:grid-cols-[180px_1fr_auto]">
             <label htmlFor={`airport-name-${airport.id}`} className="text-sm">机场名称<Input id={`airport-name-${airport.id}`} className="mt-2" value={airport.name} onChange={e => { const airports = [...data.airports]; airports[index] = { ...airport, name: e.target.value }; setData({ ...data, airports }); setDirty(true); }} /></label>
             <label htmlFor={`airport-url-${airport.id}`} className="text-sm">订阅地址<Input id={`airport-url-${airport.id}`} className="mt-2" type="password" autoComplete="off" value={airport.url} placeholder={airport.hasUrl ? '已保存；填写新地址可更换' : '粘贴 Clash 订阅地址'} onChange={e => { const airports = [...data.airports]; airports[index] = { ...airport, url: e.target.value }; setData({ ...data, airports }); setDirty(true); }} /></label>
             <Button className="self-end" aria-label={`删除机场 ${airport.name || index + 1}`} variant="ghost" disabled={data.airports.length <= 1} onClick={() => { setData({ ...data, airports: data.airports.filter(a => a.id !== airport.id) }); setDirty(true); }}><Trash2 className="size-4" /></Button>
+            {airport.refreshError && <p className="text-sm text-amber-700 sm:col-span-3">{airport.refreshError}</p>}
           </div>)}</div>
         </section>
         <section className="mb-6 rounded-2xl border bg-card p-5 sm:p-6"><h2 className="text-lg font-semibold">Webshare 固定出口</h2><p className="mb-5 mt-1 text-sm text-muted-foreground">换 IP 后，把官网对应模式的参数填写到这里。账号和端口按官网原样填写，密码留空保留原值。</p>

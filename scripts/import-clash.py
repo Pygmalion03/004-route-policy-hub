@@ -33,8 +33,7 @@ for index, (name, provider) in enumerate(config['proxy-providers'].items()):
         nodes = yaml_read(root / provider['path']).get('proxies', [])
     prefix = provider.get('override', {}).get('additional-prefix', '')
     label = prefix.rstrip('｜') or name.removesuffix('订阅')
-    bootstrap = next(p for p in proxies if p['name'] == f'订阅更新｜{name}')
-    airports.append({'id': f'airport-{index + 1}', 'name': label, 'url': provider['url'], 'nodes': nodes, 'bootstrap': bootstrap})
+    airports.append({'id': f'airport-{index + 1}', 'name': label, 'url': provider['url'], 'nodes': nodes})
 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 store = {'version': 1, 'updatedAt': now, 'token': secrets.token_urlsafe(32), 'webshare': webshare, 'airports': airports,
          'defaults': {k: v for k, v in config.items() if k in ['dns', 'sniffer']}}
