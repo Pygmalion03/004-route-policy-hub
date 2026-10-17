@@ -1,7 +1,7 @@
 # 连接管理部署记录
 
 - 源码分支：`codex/connection-management`。
-- 已部署镜像：`ghcr.io/pygmalion03/004-route-policy-hub:sha-3ee0d6d`（linux/amd64）。
+- 已部署镜像：`ghcr.io/pygmalion03/004-route-policy-hub:sha-3d317d0`（linux/amd64）。
 - NAS：沿用 `/M.2存储11/route-policy-hub`、私有数据目录与现有管理密码。
 - LAN 管理页面：`http://192.168.5.7:8787/connections`。
 - 独立配置存于 `DATA_DIR/connections.json`，仅包含实际部署环境的数据，不纳入 Git。
@@ -63,3 +63,16 @@
 - 未改动 Clash 或 Magpie 设置；固定 AI 端口真实出口请求 200 / 1.57 秒，保持原 Webshare 出口。
 - 正式首页截图：本机忽略目录 `outputs/layout-overview-public-full.png`。
 - 拼好连上游 403 仍待用户提供有效订阅地址；当前缓存节点保留。Webshare IP 未更换，实际 Claude 账号生成仍未验收。
+
+## 同日 VPS 与手动出口模式更新
+
+- 源码 `3d317d0`；镜像构建 run `39060878601` 成功，NAS 已发布，Compose 仅变更镜像标签。
+- 网站新增自建 VLESS REALITY 节点输入及三种出口方式说明；NAS 当前 VPS 清单为空，没有添加尚未部署、未实测的节点。
+- 新订阅增加「出口模式」「前置线路」；初始仍选固定 Webshare + 原机场前置，AI 专用端口和普通代理流量共同跟随手动出口模式，无自动回退。
+- VPS-only（零机场）配置解析、空链接保留已有凭据、秘密字段不回显均通过本地隔离数据验收。
+- 隔离真实请求：默认固定出口保持原 IP。故意停用测试 Webshare 端点后，拼好连 / 雪山机场直出分别完成出口检测与 GitHub 请求（200），Anthropic 接口返回未认证 401。
+- 故意让测试 VPS 端点不可达后，VPS 直出和 Webshare 经 VPS 均失败，没有转走机场。
+- NAS 升级后原值读写 200，未认证写入 401，两个规则端点 200；公网订阅 200，官方 Mihomo 解析通过，生产订阅只包含固定出口 / 机场直出两个已配置模式。
+- 本轮原生 Clash 窗口操作两次超时，未刷新当前客户端订阅或修改运行配置；当前仍使用原固定 Webshare。新模式在下次成功刷新远程订阅后出现。
+- Legend 尚缺 SSH 登录凭据。只检查到 SSH 响应及现有密钥登录被拒绝；没有在服务器安装软件，也没有 VPS 延迟或 AI 服务实测结论。
+- 私有部署材料、官方 Xray 配置解析检查及测量脚本已准备；本机 REALITY 回环握手尚未通过，后续须在真实服务器继续验收，详见 `docs/vps-setup.md`。

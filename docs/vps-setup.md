@@ -63,3 +63,21 @@ Legend 的 SSH 服务已响应，但当前没有可用登录凭据：已有默�
 参考：[Xray REALITY](https://xtls.github.io/en/config/transports/reality.html)、
 [Mihomo VLESS](https://wiki.metacubex.one/en/config/proxies/vless/)、
 [官方发布](https://github.com/XTLS/Xray-core/releases/tag/v26.3.27)。
+
+## 测量脚本与尚未完成的检查
+
+`scripts/measure-proxy.py` 只通过指定的本机代理重复实际 HTTPS 请求，不切换线路，
+记录状态码、连接 / TLS / 总耗时、超时数量、中位数和小样本 p95，报告写入私有 `data/`：
+
+```sh
+python3 scripts/measure-proxy.py --proxy http://127.0.0.1:18998 --rounds 5
+```
+
+默认 18998 是隔离测试端口，需要先启动相应测试内核；不要把它当作日常端口。
+17897 可测试当前手动选择的 AI 出口。脚本已经通过现有 Webshare 完成真实请求验收，
+这不算 Legend 测试结果。没有把 401 或 IP 风险分数当作账号生成成功。
+
+本机 Xray 服务端与 Mihomo 客户端的回环 REALITY 测试出现握手失败，尚未定位；
+已核对生成密钥对一致、目标支持 TLS 1.3。由于真实 VPS 尚不能登录，不能把
+配置解析成功表述为 REALITY 链路已可用。待登录后应在真实服务器继续验证或调整协议，
+在此之前不要将准备好的节点加入日常使用。没有向 NAS 添加这个未验收节点。
