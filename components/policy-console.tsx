@@ -25,6 +25,7 @@ import {
   Trash2,
 } from 'lucide-react';
 
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -265,6 +266,7 @@ export function PolicyConsole({
             {requiresPassword && (
               <PasswordControl password={password} onSave={savePassword} />
             )}
+            <Link href="/connections" className="rounded-lg border bg-card px-3 py-2 text-sm font-medium">机场与 Webshare</Link>
             <SyncStatus state={syncState} updatedAt={updatedAt} />
           </div>
         </header>

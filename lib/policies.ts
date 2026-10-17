@@ -85,32 +85,6 @@ const initialPolicies: Policy[] = [
     ],
   },
   {
-    id: 'agedm',
-    name: 'AGE 动漫',
-    description: '代理出口可能返回 403',
-    kind: 'website',
-    action: 'DIRECT',
-    enabled: true,
-    matchers: [
-      { type: 'DOMAIN-SUFFIX', value: 'agedm.io' },
-      { type: 'DOMAIN-SUFFIX', value: 'iagefans.com' },
-    ],
-  },
-  {
-    id: 'uu-remote',
-    name: 'UU 远程',
-    description: '保持低延迟，避免远控流量走节点',
-    kind: 'app',
-    action: 'DIRECT',
-    enabled: true,
-    matchers: [
-      { type: 'PROCESS-NAME', value: 'UURemote' },
-      { type: 'PROCESS-NAME', value: 'UURemoteServer' },
-      { type: 'PROCESS-NAME', value: 'UURemoteService' },
-      { type: 'PROCESS-NAME', value: 'UURemoteDaemon' },
-    ],
-  },
-  {
     id: 'tailscale',
     name: 'Tailscale',
     description: '避免套入第二层代理',

@@ -72,3 +72,33 @@ pnpm dev
 ```
 
 访问 `http://localhost:3000`。
+
+## 机场与固定出口管理
+
+`/connections` 使用与分流清单相同的管理密码。可以添加 / 删除机场、替换订阅地址，
+修改 Webshare Direct / Backbone 的地址、端口、协议及凭据。空白订阅地址或密码保留
+已保存的值；读取接口不回传这两类秘密。新增 / 更换机场时，服务端必须能下载该
+Clash / Mihomo 订阅，成功后保存节点快照，供客户端首次加载和订阅更新使用。
+
+首次配置可以从本机已经验证的日常配置导入（脚本依赖 macOS 自带 Ruby）：
+
+```bash
+python3 scripts/import-clash.py /absolute/path/to/daily.yaml --data-dir /absolute/path/to/private-data
+```
+
+配置及节点凭据保存于 `DATA_DIR/connections.json`，权限为 `0600`。备份时同时保护
+这个文件。订阅下载地址由独立的随机令牌保护，不能分享、公开存储或记录完整请求
+URL。连接配置接口在未设置 `ADMIN_PASSWORD` 时拒绝访问；不要把管理密码用于
+Clash 订阅令牌。
+
+在页面复制专用配置地址，导入官方 Clash Verge Rev。日常仍在 Clash 中选前置机场
+及其节点；最终出口固定为 Webshare。机场 / Webshare 参数修改后更新这份配置，
+直连 / 代理规则通过既有只读 Mihomo rule providers 每 5 分钟更新。固定 AI 代理
+监听 `127.0.0.1:17897`，不会随国内直连名单切换出口。不存在 Webshare 失败后的
+机场或 DIRECT 自动回退。
+
+网站运行于 NAS，维护规则与分发配置，不承担旁路由转发。设置 `PUBLIC_BASE_URL`
+为客户端实际访问的 HTTPS 域名，避免反向代理下产生内部地址。管理入口保持 LAN /
+Tailscale；若启用 Cloudflare Tunnel 公网入口，先设置认证，订阅和只读规则路径
+必须允许 Clash 无交互获取，管理 API 则始终要求管理密码。请勿为整个站点开启
+缓存，也不要为订阅请求启用包含完整 URL 的访问日志。
