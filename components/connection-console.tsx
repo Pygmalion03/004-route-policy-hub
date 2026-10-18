@@ -24,6 +24,7 @@ import { HubNav, NextLink } from '@/components/hub-nav';
 import { UsageGuide } from '@/components/usage-guide';
 import { parseEndpoint } from '@/lib/endpoint-import';
 import type { Endpoint } from '@/lib/connections';
+import { beijingTime as time } from '@/lib/display-time';
 
 type View = {
   configured: boolean;
@@ -52,16 +53,6 @@ type View = {
     refreshError?: string;
   }[];
 };
-const time = (value?: string) =>
-  value
-    ? new Date(value).toLocaleString('zh-CN', {
-        timeZone: 'Asia/Shanghai',
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '暂无记录';
 const plans = [
   {
     name: '机场＋Webshare',

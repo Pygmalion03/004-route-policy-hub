@@ -5,6 +5,7 @@ import { Copy, LockKeyhole, ShieldCheck, RefreshCw } from 'lucide-react';
 import { HubNav, NextLink } from '@/components/hub-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { beijingTime } from '@/lib/display-time';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -220,7 +221,7 @@ export function ClaudeConsole() {
                 <h2 className="text-sm font-medium">网站配置</h2>
                 <p className="mt-2 text-xs leading-6 text-muted-foreground">
                   {data.claude
-                    ? `配置已保存 · ${new Date(data.claude.pinnedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}（北京时间）。本机是否已应用，请用启动器检查。`
+                    ? `配置已保存 · ${beijingTime(data.claude.pinnedAt)}（北京时间）。本机是否已应用，请用启动器检查。`
                     : '尚未发布专用配置'}
                 </p>
               </div>
