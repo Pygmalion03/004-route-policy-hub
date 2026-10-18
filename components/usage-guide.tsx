@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 
 const questions = [
+  { title: '国内和国外怎么分流？', answer: '日常网络在规则模式下：局域网和 Tailscale 直连；网站例外优先；其余国内域名或国内 IP 自动直连，其他流量走使用方案。国内规则每日更新。Claude 专用入口完全独立，不使用这些例外或国内规则。' },
+  { title: 'Claude 与日常需要来回切模式吗？', answer: '不需要。日常应用使用日常分流；通过专用启动器打开的 Edge 和 Claude Code 使用独立固定出口。两者同时运行。Clash 保持日常网络订阅激活即可，不要为 Claude 切换整份订阅。' },
+  { title: '启动时要打开哪些东西？', answer: '保持 Clash 与 LuLu 后台运行。网页使用 Claude 专用 Edge 应用；命令行使用首页复制的专用启动命令。管理网站只在修改配置时打开；命令行运行无需一直开着 Edge。LuLu 设置页无需操作；陌生连接弹窗请核对程序、地址与端口，勿一律允许。' },
   { title: '日常怎么切换？', answer: 'Clash 保持启用日常订阅，在「使用方案」选择机场＋Webshare、VPS＋Webshare、只用 VPS 或只用机场。需要机场时，到「机场节点」选择带机场名称的地区节点；只有一台 VPS 时不需要再选。网页的卡片是使用说明，不会遥控本机切换。' },
   { title: '换地区，固定 IP 会跟着变吗？', answer: '两个 Webshare 方案的最终出口都是 Webshare，切换机场地区不会改变它。只用机场时，出口是所选机场节点；只用 VPS 时，出口是 VPS。' },
   { title: '更换后怎样直接用？', answer: '到「日常网络」选择要更换的连接，填入新参数并保存发布；然后到 Clash 订阅页刷新「日常网络 · 网站管理」。订阅地址不变，不需要重新导入。后续刷新会保留有效的方案和节点选择，原节点被移除时需重新选择。' },

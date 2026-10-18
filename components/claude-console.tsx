@@ -132,7 +132,7 @@ export function ClaudeConsole() {
         <h1 className="mt-2 text-3xl font-semibold">Claude 专用网络</h1>
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
           固定出口单独保存。日常切换机场、VPS
-          或修改直连例外，不改变这里的出口。
+          或修改网站例外，不改变这里的出口。
         </p>
         {!data ? (
           <section className="my-6 rounded-2xl border bg-card p-5">
@@ -186,7 +186,7 @@ export function ClaudeConsole() {
                   : '选择一台已部署 VPS，设置独立固定出口。'}
               </p>
               <p className="mt-4 text-xs leading-6 opacity-80">
-                专用端口 17997 · 不自动切换其他出口 · 不使用直连例外
+                专用端口 17997 · 不自动切换其他出口 · 不使用网站例外
               </p>
             </section>
             <section className="mb-6 rounded-2xl border bg-card p-5">
@@ -322,7 +322,7 @@ export function ClaudeConsole() {
         )}
         <div className="flex flex-wrap gap-5">
           <NextLink href="/connections">管理日常网络</NextLink>
-          <NextLink href="/policies">管理直连例外</NextLink>
+          <NextLink href="/policies">管理网站例外</NextLink>
         </div>
       </div>
     </main>

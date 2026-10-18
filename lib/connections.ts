@@ -215,7 +215,11 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
       { name: 'AI 专用出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '使用方案' },
       ...(claudeName ? [{ name: 'Claude 专用入口', type: 'mixed', listen: '127.0.0.1', port: 17997, proxy: claudeName }] : []),
     ],
-    'rule-providers': ruleProviders,
-    rules: [...privateRules, 'RULE-SET,hub-direct,DIRECT', 'RULE-SET,hub-proxy,使用方案', 'MATCH,使用方案'],
+    'rule-providers': {
+      ...ruleProviders,
+      'china-domains': { type: 'http', behavior: 'domain', format: 'mrs', url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs', path: './rule_providers/china-domains.mrs', interval: 86400, proxy: '使用方案' },
+      'china-ips': { type: 'http', behavior: 'ipcidr', format: 'mrs', url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs', path: './rule_providers/china-ips.mrs', interval: 86400, proxy: '使用方案' },
+    },
+    rules: [...privateRules, 'RULE-SET,hub-direct,DIRECT', 'RULE-SET,hub-proxy,使用方案', 'RULE-SET,china-domains,DIRECT', 'RULE-SET,china-ips,DIRECT', 'MATCH,使用方案'],
   };
 }

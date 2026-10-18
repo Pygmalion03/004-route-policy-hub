@@ -13,7 +13,6 @@ export const dynamic = 'force-dynamic';
 const headers = { 'cache-control': 'no-store' };
 const isSite = (p: Policy) =>
   p.enabled &&
-  p.action === 'DIRECT' &&
   p.kind === 'website' &&
   p.matchers.every((m) => m.type === 'DOMAIN-SUFFIX');
 const view = (store: Awaited<ReturnType<typeof readPolicyStore>>) => ({
@@ -23,7 +22,7 @@ const view = (store: Awaited<ReturnType<typeof readPolicyStore>>) => ({
   ),
   sites: store.policies
     .filter(isSite)
-    .map((p) => ({ id: p.id, domain: p.matchers[0].value })),
+    .map((p) => ({ id: p.id, domain: p.matchers[0].value, action: p.action })),
 });
 export async function GET() {
   return Response.json(view(await readPolicyStore()), { headers });
@@ -38,7 +37,7 @@ async function update(request: Request, remove: boolean) {
       throw new PolicyStoreConflictError(store);
     if (remove) {
       if (!store.policies.some((p) => p.id === input.id && isSite(p)))
-        throw new Error('未找到这条直连网站');
+        throw new Error('未找到这条网站例外');
       store.policies = store.policies.filter((p) => p.id !== input.id);
     } else if (input.application === 'uu-remote') {
       const policy = store.policies.find((p) => p.id === 'uu-remote');
@@ -68,14 +67,16 @@ async function update(request: Request, remove: boolean) {
           (p) => isSite(p) && p.matchers.some((m) => m.value === domain),
         )
       )
-        throw new Error('该网站已在直连清单中');
+        throw new Error('该网站已有例外，请先移除再添加');
+      const action = input.action ?? 'DIRECT';
+      if (!['DIRECT', 'PROXY'].includes(action)) throw new Error('请选择直连或日常代理');
       store.policies.push({
         id: randomUUID(),
         name: domain,
         kind: 'website',
-        description: '日常上网的直连例外',
+        description: '日常上网的网站例外',
         enabled: true,
-        action: 'DIRECT',
+        action,
         matchers: [{ type: 'DOMAIN-SUFFIX', value: domain }],
       });
     }

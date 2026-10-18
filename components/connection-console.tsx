@@ -434,7 +434,7 @@ export function ConnectionConsole({
                   <NextLink href="/connections">去更换配置</NextLink>
                 </div>
                 <div className="mt-3">
-                  <NextLink href="/policies">添加国内直连网站</NextLink>
+                  <NextLink href="/policies">管理网站分流例外</NextLink>
                 </div>
               </div>
             </section>
@@ -884,10 +884,10 @@ export function ConnectionConsole({
                   <h2 className="font-medium">只换地区？不用改网站</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Clash →
-                    机场节点，直接选择机场和地区。需要直连的网站或应用在「直连例外」管理。
+                    机场节点，直接选择机场和地区。需要直连的网站或应用在「网站例外」管理。
                   </p>
                 </div>
-                <NextLink href="/policies">管理直连例外</NextLink>
+                <NextLink href="/policies">管理网站例外</NextLink>
               </section>
               <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card/95 px-4 py-4 shadow-lg backdrop-blur">
                 <div>

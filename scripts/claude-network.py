@@ -37,13 +37,16 @@ def route(runtime):
 
 def profile():
     p = LOCAL / 'claude-network.sb'
+    protected = [ROOT/'scripts', LOCAL, RUNTIME.parent]
+    protected_paths = ' '.join('(subpath '+json.dumps(str(path))+')' for path in protected)
     private_write(p, '''(version 1)
 (allow default)
-(deny network-outbound (remote tcp "*:*") (remote udp "*:*"))
+(deny network-outbound)
 (deny network-outbound (literal "/private/var/run/mDNSResponder") (literal "/private/var/tmp/mDNSResponder"))
 (allow network-outbound (remote tcp "localhost:17997"))
 (deny process-exec (literal "/usr/bin/open"))
-''')
+'''+ '(deny file-write* '+protected_paths+')\n'+
+        '(allow file-write* (literal '+json.dumps(str(LOCAL/'pending-auth.json'))+'))\n')
     return p
 
 def sandbox_command(policy, command):

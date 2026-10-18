@@ -6,10 +6,11 @@ import { HubNav } from '@/components/hub-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-type View = { updatedAt: string; uuDirect: boolean; sites: { id: string; domain: string }[] };
+type View = { updatedAt: string; uuDirect: boolean; sites: { id: string; domain: string; action: 'DIRECT' | 'PROXY' }[] };
 export function DirectSiteConsole() {
   const [data, setData] = useState<View | null>(null),
     [domain, setDomain] = useState('');
+  const [action, setAction] = useState<'DIRECT' | 'PROXY'>('DIRECT');
   const [password, setPassword] = useState(''),
     [unlocked, setUnlocked] = useState(false),
     [busy, setBusy] = useState(false),
@@ -60,7 +61,7 @@ export function DirectSiteConsole() {
         },
         body: JSON.stringify({
           updatedAt: data.updatedAt,
-          ...(id ? { id } : application ? { application } : { domain }),
+          ...(id ? { id } : application ? { application } : { domain, action }),
         }),
       });
       const result = await r.json();
@@ -74,8 +75,8 @@ export function DirectSiteConsole() {
         application
           ? 'UU 远程已设为直连，约五分钟更新。Claude 专用入口继续使用固定代理。'
           : id
-          ? '已移除。该网站恢复跟随日常方案，约五分钟更新。'
-          : '已添加。该网站及其子域名会直连，约五分钟更新。',
+          ? '已移除。该网站恢复国内自动直连、国外走日常方案，约五分钟更新。'
+          : `已添加。该网站及其子域名${action === 'DIRECT' ? '直连' : '走日常代理'}，约五分钟更新。`,
       );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : '保存失败');
@@ -88,10 +89,9 @@ export function DirectSiteConsole() {
       <HubNav active="policies" />
       <div className="mx-auto max-w-[1000px] px-5 py-9 sm:px-7">
         <p className="text-xs tracking-widest text-primary">只管理例外</p>
-        <h1 className="mt-2 text-3xl font-semibold">直连例外</h1>
+        <h1 className="mt-2 text-3xl font-semibold">网站例外</h1>
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          日常网站默认走你在 Clash
-          选择的方案。这里单独管理直连网站和应用；网站移除后恢复默认。
+          国内网站自动直连，国外网站走 Clash「使用方案」。这里仅添加需要覆盖自动分流的网站；移除例外后恢复自动判断。
         </p>
         <div className="my-6 rounded-2xl border border-primary/20 bg-secondary/40 p-5 text-sm leading-7">
           <strong>这份清单不影响 Claude 专用入口。</strong>
@@ -125,7 +125,7 @@ export function DirectSiteConsole() {
         ) : (
           <section className="mb-6 rounded-2xl border bg-card p-5">
             <label htmlFor="direct-domain" className="text-sm font-medium">
-              添加需要直连的网站
+              添加需要特别处理的网站
             </label>
             <div className="mt-3 flex flex-wrap gap-3">
               <Input
@@ -139,6 +139,10 @@ export function DirectSiteConsole() {
                     void update();
                 }}
               />
+              <select aria-label="网站连接方式" className="rounded-md border bg-background px-3 text-sm" value={action} onChange={(e) => setAction(e.target.value as 'DIRECT' | 'PROXY')}>
+                <option value="DIRECT">始终直连</option>
+                <option value="PROXY">始终走日常代理</option>
+              </select>
               <Button
                 disabled={busy || !domain.trim()}
                 onClick={() => void update()}
@@ -148,7 +152,7 @@ export function DirectSiteConsole() {
               </Button>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              不需要选择直连或代理，也没有启用开关。
+              例外优先于国内自动分流。保存即发布，Clash 约五分钟更新；不影响 Claude 专用入口。
             </p>
           </section>
         )}
@@ -188,7 +192,7 @@ export function DirectSiteConsole() {
                   <div>
                     <p className="font-medium">{site.domain}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      包含其子域名 · 直连
+                      包含其子域名 · {site.action === 'PROXY' ? '日常代理' : '直连'}
                     </p>
                   </div>
                   <Button
@@ -207,7 +211,7 @@ export function DirectSiteConsole() {
           ) : (
             <p className="py-8 text-sm text-muted-foreground">
               {data
-                ? '还没有添加网站。日常外网流量默认使用代理方案。'
+                ? '还没有添加网站。国内自动直连，国外走日常代理。'
                 : '正在读取…'}
             </p>
           )}
