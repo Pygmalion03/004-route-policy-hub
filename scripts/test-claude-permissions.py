@@ -80,6 +80,17 @@ class PermissionTests(unittest.TestCase):
         self.assertNotEqual(execute(network.profile(self.project), read), 0)
         self.assertEqual(self.outside.read_text(), 'non-sensitive test fixture')
 
+    def test_git_uses_read_only_session_configuration(self):
+        subprocess.run(['/usr/bin/git', 'init', '--quiet', str(self.project)], check=True, capture_output=True)
+        session = self.base/'session'
+        (session/'requests').mkdir(parents=True)
+        env = network.session_environment(session)
+        policy = network.profile(self.project, session=session)
+        result = subprocess.run(network.sandbox_command(policy, ['/usr/bin/git', 'status', '--short']), cwd=self.project, env=env, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = subprocess.run(network.sandbox_command(policy, ['/usr/bin/git', 'config', '--global', 'user.name', 'unexpected']), cwd=self.project, env=env, capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+
 
 if __name__ == '__main__':
     unittest.main()

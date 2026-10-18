@@ -95,6 +95,18 @@ def proxy_environment():
     env['BROWSER'] = str(ROOT / 'scripts/claude-auth-browser.command')
     return env
 
+def session_environment(session):
+    env = proxy_environment()
+    config = session/'gitconfig'
+    private_write(config, '')
+    for key in ['user.name', 'user.email']:
+        value = subprocess.run(['/usr/bin/git', 'config', '--global', '--get', key], capture_output=True, text=True)
+        if value.returncode == 0:
+            subprocess.run(['/usr/bin/git', 'config', '--file', str(config), key, value.stdout.strip()], check=True, capture_output=True)
+    env['GIT_CONFIG_GLOBAL'] = str(config)
+    env['CLAUDE_SAFE_SESSION'] = str(session)
+    return env
+
 def capture_auth(url):
     if urlsplit(url).scheme not in ['http','https']: raise SetupError('登录地址格式不受支持。')
     private_write(LOCAL/'pending-auth.json',json.dumps({'url':url,'createdAt':time.time()}))
@@ -165,8 +177,7 @@ def run_session(project, cli, arguments):
     hook = shlex.join(['/usr/bin/python3', '-I', str(ROOT/'scripts/claude-permissions.py')])
     settings = {'hooks': {'PreToolUse': [{'matcher': 'Read|Edit|Write|NotebookEdit|Glob|Grep', 'hooks': [{'type': 'command', 'command': hook}]}]}}
     options = ['--setting-sources', '', '--settings', json.dumps(settings), '--permission-mode', 'acceptEdits', '--no-chrome', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}']
-    env = proxy_environment()
-    env['CLAUDE_SAFE_SESSION'] = str(session)
+    env = session_environment(session)
     current = ['--session-id', session_id]
     child = None
     try:
