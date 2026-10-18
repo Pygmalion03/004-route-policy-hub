@@ -120,7 +120,7 @@ def main():
     expected=route(a.runtime);policy=profile();actual=verify(expected,policy)
     if a.mode=='check':
         browser_guard()
-        print('固定出口：'+actual+'\n命令行出站限制：已启用\nLuLu 扩展与 Edge 规则：已核对',flush=True)
+        print('固定出口：'+actual+'\n受限命令行检查：已通过\nLuLu 扩展与 Edge 规则：已核对',flush=True)
         r=subprocess.run(sandbox_command(policy,['/usr/bin/curl','-sS','--proxy','http://127.0.0.1:17997','--noproxy','','--connect-timeout','5','--max-time','15','-o','/dev/null','-w','%{http_code} %{time_starttransfer}','https://api.anthropic.com/v1/models']),capture_output=True,text=True)
         parts=r.stdout.split()
         if r.returncode or len(parts)!=2:raise SetupError('Anthropic HTTPS 请求失败或超时。请检查专用线路。')
