@@ -257,6 +257,8 @@ export function ConnectionConsole({
   }
   const airports = data?.configured ? data.airports : [],
     vpsNodes = data?.vpsNodes || [];
+  const defaultPlan =
+    data?.configured && !airports.length ? 'VPS＋Webshare' : '机场＋Webshare';
   const endpoint = data?.configured ? data.webshare[method] : null;
   function updateEndpoint(patch: Partial<Endpoint>) {
     if (data?.configured)
@@ -383,13 +385,13 @@ export function ConnectionConsole({
                 return (
                   <article
                     key={plan.name}
-                    className={`rounded-2xl border p-6 ${index === 0 ? 'border-primary/30 bg-primary text-primary-foreground' : 'bg-card'}`}
+                    className={`rounded-2xl border p-6 ${plan.name === defaultPlan ? 'border-primary/30 bg-primary text-primary-foreground' : 'bg-card'}`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-xs opacity-70">
                         方案 0{index + 1}
                       </span>
-                      {index === 0 && (
+                      {plan.name === defaultPlan && (
                         <span className="rounded-full bg-white/15 px-3 py-1 text-xs">
                           默认方案
                         </span>
@@ -541,7 +543,10 @@ export function ConnectionConsole({
                           key={key}
                           type="button"
                           variant={method === key ? 'default' : 'outline'}
-                          onClick={() => setMethod(key)}
+                          onClick={() => {
+                            setMethod(key);
+                            change({ ...data, webshareMethod: key });
+                          }}
                         >
                           {key === 'direct' ? 'Direct' : 'Backbone'}
                         </Button>
@@ -634,24 +639,11 @@ export function ConnectionConsole({
                         </label>
                       </div>
                     </details>
-                    <label className="flex items-start gap-3 text-sm">
-                      <input
-                        type="checkbox"
-                        className="mt-1"
-                        checked={(data.webshareMethod || 'direct') === method}
-                        onChange={(e) => {
-                          if (e.target.checked)
-                            change({ ...data, webshareMethod: method });
-                        }}
-                      />
-                      <span>
-                        发布时使用此接入方式
-                        <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                          两个 Webshare 方案都会使用这里选定的端点，无需到 Clash
-                          分别配置。
-                        </p>
-                      </span>
-                    </label>
+                    <p className="text-xs leading-6 text-muted-foreground">
+                      发布后，两个 Webshare 方案统一使用此处选择的{' '}
+                      {method === 'direct' ? 'Direct' : 'Backbone'} 端点，无需到
+                      Clash 分别配置。
+                    </p>
                   </fieldset>
                 </section>
               )}

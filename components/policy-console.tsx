@@ -250,7 +250,7 @@ export function PolicyConsole({
           <div>
             <p className="mb-2 text-xs font-medium tracking-widest text-primary">按需直连</p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">分流规则</h1>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">默认使用固定出口。需要直连的国内网站，在这里添加域名。</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">默认跟随 Clash 的使用方案。需要直连的国内网站，在这里添加域名。</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -283,7 +283,7 @@ export function PolicyConsole({
             icon={<Cloud className="size-4" />}
             label="代理"
             value={counts.PROXY}
-            note="明确指定固定出口"
+            note="跟随 Clash 使用方案"
             tone="proxy"
           />
           <SummaryCard

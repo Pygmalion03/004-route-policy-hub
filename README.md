@@ -91,11 +91,11 @@ python3 scripts/import-clash.py /absolute/path/to/daily.yaml --data-dir /absolut
 URL。连接配置接口在未设置 `ADMIN_PASSWORD` 时拒绝访问；不要把管理密码用于
 Clash 订阅令牌。
 
-在页面复制专用配置地址，导入官方 Clash Verge Rev。日常仍在 Clash 中选前置机场
-及其节点；默认出口固定为 Webshare。机场 / VPS / Webshare 参数修改后更新这份配置，
+在页面复制专用配置地址，导入官方 Clash Verge Rev。日常在 Clash 的「使用方案」选择四种路径，需要机场时在「机场节点」选地区。
+默认出口固定为 Webshare。机场 / VPS / Webshare 参数修改后更新这份配置，
 直连 / 代理规则通过既有只读 Mihomo rule providers 每 5 分钟更新。AI 专用代理
-监听 `127.0.0.1:17897`，不应用国内直连名单；它与默认代理流量共同跟随手动选择的「出口模式」。
-默认仍为 Webshare；可明确选择 VPS 直出或机场直出，失败时不会自动回退。
+监听 `127.0.0.1:17897`，不应用国内直连名单；它与默认代理流量共同跟随手动选择的「使用方案」。
+默认仍为 Webshare；可明确选择只用 VPS 或只用机场，失败时不会自动回退。
 
 网站运行于 NAS，维护规则与分发配置，不承担旁路由转发。设置 `PUBLIC_BASE_URL`
 为客户端实际访问的 HTTPS 域名，避免反向代理下产生内部地址。管理入口保持 LAN /
@@ -117,8 +117,9 @@ Tailscale；若启用 Cloudflare Tunnel 公网入口，先设置认证，订阅�
 
 连接页面支持添加 VLESS REALITY / TCP / Vision 节点链接，留空保留既有节点凭据，
 读取时不回传链接、UUID 或 REALITY 客户端材料。没有机场时也可单独保留 VPS。
-「出口模式」统一控制普通代理流量与 AI 专用端口；Webshare 模式可在「前置线路」
-选择机场或 VPS。「VPS 直出」不依赖 Webshare，「机场直出」只使用所选机场。
+「使用方案」统一控制普通代理流量与 AI 专用端口：机场＋Webshare、VPS＋Webshare、
+只用 VPS、只用机场。内部连接组隐藏，只有一台 VPS 时无需再选节点。
 
 部署与验收步骤见 [自建 VPS 接入](docs/vps-setup.md)。主机 IP 和 SSH 端口不是代理节点；
-当前 Legend 仅完成私有材料准备，缺少 SSH 登录凭据，尚未部署或验收真实代理流量。
+Legend 已通过密码库登录并部署，VPS 直出与 VPS＋Webshare 均完成真实 HTTPS 验收；
+结果与限制见接入文档。
