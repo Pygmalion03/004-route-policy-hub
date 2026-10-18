@@ -450,6 +450,7 @@ export function ConnectionConsole({
         ) : (
           data?.configured && (
             <>
+              <section className="mb-6 rounded-2xl border bg-card p-5"><h2 className="font-semibold">日常的四种使用方案</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">在 Clash 选择「使用方案」；需要机场时，再选「机场节点」。这里的选择不影响 Claude 专用入口。</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{plans.map(plan => <div key={plan.name} className="rounded-xl bg-muted/50 p-4"><h3 className="text-sm font-medium">{plan.name}</h3><p className="mt-2 text-xs text-muted-foreground">{plan.path} · 出口：{plan.exit}</p></div>)}</div></section>
               <section
                 className="mb-7 rounded-2xl border bg-card p-5 sm:p-6"
                 aria-label="更新进度"

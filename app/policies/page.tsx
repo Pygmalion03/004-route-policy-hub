@@ -1,9 +1,5 @@
-import { PolicyConsole } from '@/components/policy-console';
-import { readPolicyStore } from '@/lib/policies';
+import { DirectSiteConsole } from '@/components/direct-site-console';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PoliciesPage() {
-  const store = await readPolicyStore();
-  return <PolicyConsole initialStore={store} initialRequiresPassword={Boolean(process.env.ADMIN_PASSWORD)} />;
-}
+export default function PoliciesPage() { return <DirectSiteConsole />; }

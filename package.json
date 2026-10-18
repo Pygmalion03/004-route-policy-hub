@@ -9,7 +9,7 @@
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",
-    "lint": "oxlint app components/policy-console.tsx components/connection-console.tsx components/hub-nav.tsx components/usage-guide.tsx lib types",
+    "lint": "oxlint app components/policy-console.tsx components/connection-console.tsx components/hub-nav.tsx components/usage-guide.tsx components/claude-console.tsx components/direct-site-console.tsx lib types",
     "format": "oxfmt"
   },
   "dependencies": {

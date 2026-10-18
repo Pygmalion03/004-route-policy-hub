@@ -1,4 +1,5 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { isIP } from 'node:net';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parse } from 'yaml';
@@ -14,6 +15,7 @@ export type ConnectionStore = {
   airports: Airport[];
   vpsNodes?: VpsNode[];
   webshareMethod?: 'direct' | 'backbone';
+  claude?: { expectedIp: string; pinnedAt: string; frontName: string; endpoint: Endpoint; front: Node };
   defaults: Record<string, unknown>;
 };
 const location = () => path.join(process.env.DATA_DIR || path.join(process.cwd(), 'data'), 'connections.json');
@@ -37,6 +39,7 @@ export function publicConnections(store: ConnectionStore | null) {
   return {
     configured: true, updatedAt: store.updatedAt,
     webshareMethod: store.webshareMethod || 'direct',
+    claude: store.claude ? { expectedIp: store.claude.expectedIp, pinnedAt: store.claude.pinnedAt, frontName: store.claude.frontName, port: 17997 } : null,
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
     airports: store.airports.map(({ id, name, nodes, refreshedAt, refreshError }) => ({ id, name, nodeCount: nodes.length, url: '', hasUrl: true, refreshedAt, refreshError })),
     vpsNodes: (store.vpsNodes || []).map(({ id, name, node }) => ({ id, name, server: node.server, port: node.port, type: node.type, hasConfig: true, shareUrl: '' })),
@@ -68,7 +71,7 @@ export async function saveConnections(input: unknown) {
   const operation = pending.catch(() => {}).then(async () => {
     const current = await readConnections();
     if (!current) throw new Error('请先导入本机已验证的配置');
-    const value = input as { updatedAt: string; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
+    const value = input as { updatedAt: string; pinClaude?: { vpsId: string; expectedIp: string }; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
     if (value.updatedAt !== current.updatedAt) throw new Error('配置已被其他页面修改，请重新读取后再保存');
     const vpsInput = value.vpsNodes ?? current.vpsNodes?.map(v => ({ id: v.id, name: v.name, shareUrl: '' })) ?? [];
     if (!Array.isArray(vpsInput) || vpsInput.length > 10) throw new Error('自建 VPS 数量不能超过 10 个');
@@ -115,6 +118,12 @@ export async function saveConnections(input: unknown) {
     const webshareMethod = value.webshareMethod ?? current.webshareMethod ?? 'direct';
     if (!['direct', 'backbone'].includes(webshareMethod)) throw new Error('请选择 Direct 或 Backbone 接入');
     const next: ConnectionStore = { ...current, airports, vpsNodes, webshare, webshareMethod, updatedAt: new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString() };
+    if (value.pinClaude) {
+      const front = vpsNodes.find(v => v.id === value.pinClaude!.vpsId);
+      const expectedIp = String(value.pinClaude.expectedIp || '').trim();
+      if (!front || !isIP(expectedIp)) throw new Error('请选择已配置的 VPS，并填写已核实的固定出口 IP');
+      next.claude = { expectedIp, pinnedAt: next.updatedAt, frontName: front.name, endpoint: { ...webshare[webshareMethod] }, front: { ...front.node } };
+    }
     await writeConnections(next);
     return next;
   });
@@ -155,6 +164,11 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
   const vpsNodes = store.vpsNodes || [];
   if (vpsNodes.length) proxies.push({ ...endpoint, name: 'Webshare · VPS 通道', 'dialer-proxy': 'VPS 节点' });
   proxies.push(...vpsNodes.map(v => ({ ...v.node, name: `自建 VPS｜${v.name}` })));
+  const claudeName = store.claude ? `Claude 固定出口｜${store.claude.expectedIp}` : null;
+  if (store.claude) proxies.push(
+    { ...store.claude.front, name: 'Claude 专用前置' },
+    { ...store.claude.endpoint, name: claudeName!, 'dialer-proxy': 'Claude 专用前置' },
+  );
   const providers = Object.fromEntries(store.airports.map((airport) => [airport.id, {
     type: 'inline', payload: airport.nodes,
     override: { 'additional-prefix': `${airport.name}｜` },
@@ -187,8 +201,11 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     ...JSON.parse(JSON.stringify(store.defaults).replaceAll('#固定出口', '#使用方案').replaceAll('#出口模式', '#使用方案')), 'mixed-port': 7897, 'allow-lan': false, mode: 'rule', 'log-level': 'warning', ipv6: false,
     profile: { 'store-selected': true },
     proxies, 'proxy-providers': providers, 'proxy-groups': groups,
-    listeners: [{ name: 'AI 专用出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '使用方案' }],
+    listeners: [
+      { name: '现有 AI 出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '使用方案' },
+      ...(claudeName ? [{ name: 'Claude 专用入口', type: 'mixed', listen: '127.0.0.1', port: 17997, proxy: claudeName }] : []),
+    ],
     'rule-providers': ruleProviders,
-    rules: [...privateRules, 'RULE-SET,hub-proxy,使用方案', 'RULE-SET,hub-direct,DIRECT', 'MATCH,使用方案'],
+    rules: [...privateRules, 'RULE-SET,hub-direct,DIRECT', 'RULE-SET,hub-proxy,使用方案', 'MATCH,使用方案'],
   };
 }

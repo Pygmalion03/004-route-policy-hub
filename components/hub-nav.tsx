@@ -11,9 +11,9 @@ export function HubNav({ active }: { active: 'overview' | 'connections' | 'polic
         </Link>
         <nav aria-label="主导航" className="flex w-full gap-1 rounded-xl bg-muted p-1 text-sm sm:w-auto">
           {([
-            ['overview', '/', '使用方案'],
-            ['connections', '/connections', '更换配置'],
-            ['policies', '/policies', '分流规则'],
+            ['overview', '/', 'Claude 专用'],
+            ['connections', '/connections', '日常网络'],
+            ['policies', '/policies', '国内直连'],
           ] as const).map(([key, href, label]) => <Link key={key} href={href} aria-current={active === key ? 'page' : undefined} className={`flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-center transition-colors ${active === key ? 'bg-card font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{label}</Link>)}
         </nav>
       </div>
