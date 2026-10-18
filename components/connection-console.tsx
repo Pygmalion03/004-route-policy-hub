@@ -796,7 +796,7 @@ export function ConnectionConsole({
                     </Button>
                   </div>
                   <p className="mb-5 text-sm leading-6 text-muted-foreground">
-                    只粘贴安装好代理服务后的 VLESS REALITY 链接。这里不填写 SSH
+                    粘贴安装好代理服务后的 VLESS REALITY 或 Hysteria2 链接。这里不填写 SSH
                     或 root 密码。
                   </p>
                   <fieldset disabled={busy} className="space-y-4">
@@ -829,7 +829,7 @@ export function ConnectionConsole({
                             htmlFor={`vps-link-${v.id}`}
                             className="text-sm"
                           >
-                            VLESS REALITY 节点链接
+                            代理节点链接
                             <Input
                               id={`vps-link-${v.id}`}
                               className="mt-2"
@@ -839,7 +839,7 @@ export function ConnectionConsole({
                               placeholder={
                                 v.hasConfig
                                   ? '已保存；留空保留原节点'
-                                  : '粘贴 vless:// 节点链接'
+                                  : '粘贴 vless:// 或 hysteria2:// 节点链接'
                               }
                               onChange={(e) =>
                                 change({
