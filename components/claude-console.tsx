@@ -134,6 +134,18 @@ export function ClaudeConsole() {
           固定出口单独保存。日常切换机场、VPS
           或修改网站例外，不改变这里的出口。
         </p>
+        <section aria-label="两组设备策略" className="my-6 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border bg-card p-5">
+            <h2 className="font-semibold">Mac 独立策略</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">默认走代理；UU、荣耀投屏、局域网、Tailscale 和手动直连例外保留。Claude 使用单独固定出口。</p>
+            <p className="mt-2 text-xs leading-6 text-muted-foreground">当前 Mac 通过本地订阅脚本应用；网站保存配置不等于本机已应用或实测。</p>
+          </div>
+          <div className="rounded-2xl border bg-card p-5">
+            <h2 className="font-semibold">家庭设备策略 · NAS 网关待实施</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">除 Mac 外的 Windows 主机、手机和其他家庭设备，计划由 NAS 统一按访问目标分流：国内直连、国外代理。</p>
+            <p className="mt-2 text-xs leading-6 text-muted-foreground">当前网站只管理与分发配置，尚未接管这些设备流量。网关不能直接识别设备上的程序名。</p>
+          </div>
+        </section>
         {!data ? (
           <section className="my-6 rounded-2xl border bg-card p-5">
             <label htmlFor="claude-password" className="text-sm">
@@ -191,7 +203,8 @@ export function ClaudeConsole() {
             </section>
             <section className="mb-6 rounded-2xl border bg-card p-5">
               <h2 className="font-semibold">平时从这里启动</h2>
-              <p className="mt-3 text-sm leading-7"><strong>浏览器：</strong>在 Mac 启动台或聚焦搜索打开「Claude 专用 Edge」。<br /><strong>命令行：</strong>复制下方 Claude Code 命令，在 Terminal 运行。</p>
+              <p className="mt-3 text-sm leading-7"><strong>Claude Code：</strong>打开「Claude 项目启动器」，先准备独立工作区，再启动。工作区内自动编辑，越界时弹窗申请，批准后恢复会话。<br /><strong>浏览器：</strong>打开「Claude 专用 Edge」。</p>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">无需注册即可准备工作区；Claude 账号尚未验收，登录和真实生成需要本人完成。独立副本从已提交代码创建，未提交改动和未跟踪文件不会复制。</p>
               <p className="mt-2 text-sm leading-7 text-muted-foreground">保持 Clash 和 LuLu 运行。无需先切日常方案；切换整份订阅或重启 Clash 仍可能中断连接。</p>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
                 启动器先核对实际出口

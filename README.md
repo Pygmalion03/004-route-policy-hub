@@ -129,6 +129,10 @@ Clash 日常保持激活「日常网络 · 网站管理」。首页发布专用�
 ./scripts/claude-safe.command
 ```
 
+本机也可直接打开 `~/Applications/Claude 项目启动器.app`，选择 Mac 项目文件夹后在 Terminal 启动，无需输入命令；应用内另有「打开专用 Edge / 登录」按钮。重新安装入口：`python3 scripts/install-claude-project.py`。命令行可用 `./scripts/claude-safe.command --project /absolute/project/path` 指定目录。
+
+专用启动使用目录内自动编辑（acceptEdits），不加载用户 / 项目的 settings、插件钩子或外部 MCP，只加载启动器自己的文件授权 Hook，不自动连接浏览器；既有设置文件不改动。外层 macOS 限制阻止读取项目外的个人主目录文件、写入项目外文件及发送 Apple Events；Claude 自身运行文件、状态目录和临时目录保留必要访问。这是有限的进程约束，不是虚拟机或整机隔离。项目中的代码与秘密文件仍需自行管理。直接运行 `claude` 不具备这些启动限制。
+
 启动器先核对实际出口，再使用 macOS 网络限制启动 Claude Code 及其子进程：只允许连接本机 17997，代理失败或出口不符时拒绝启动。直接执行 `claude` 不具备这层限制。子进程需要其他网络时也会受此限制。
 
 浏览器使用本机应用「Claude 专用 Edge」，保持 Clash 与 LuLu 运行。LuLu 只允许 Edge 连接专用端口；已实测代理关闭时网页失败，恢复后仍为固定出口，访问普通本机代理端口被阻止。旧本地 Edge 资料由用户删除，专用资料未导入旧账号、书签或密码。
@@ -144,3 +148,28 @@ Clash 日常保持激活「日常网络 · 网站管理」。首页发布专用�
 Mac 的 SSH/Mutagen 经 Tailscale 连接 WSL，普通开发不经过 Claude 沙箱。Claude 外层 macOS 限制现在默认拒绝所有出站连接（包含 Unix socket），仅允许 TCP localhost:17997，并阻止修改启动脚本、限制文件和 Clash 配置目录。已发现并修复旧规则允许复用 SSH ControlMaster/访问 Clash Unix 控制接口的问题。受限 Claude 内 SSH 因此不可用；不应将远端运行程序误认为仍受 Mac 防火墙保护。此方案不等同虚拟机隔离，不保证无法逃逸或账号不受限制。
 
 使用说明与域名目录：`/network-guide.html`。新设备导入订阅只安装路由配置，不会自动部署 Edge、LuLu 或本机启动脚本。
+
+### 当前 Mac：默认代理，远程与投屏直连
+
+当前 Mac 为这份日常订阅单独安装了 `scripts/mac-routing.js`（`python3 scripts/install-mac-routing.py` 后在 Clash 点击「重新激活订阅」）。保持规则模式和 TUN；UU 远程、荣耀超级工作台 / 投屏及其后台进程优先直连，局域网、Tailscale 与手动直连例外保留，其余默认走「使用方案」。只移除本机的国内域名 / IP 自动直连匹配，不修改 NAS 分发配置。订阅刷新仍应用这个本地脚本；切换其他订阅不自动继承。原脚本备份在忽略目录 `data/usability-backup`。
+
+Mac 项目修改由外部独立 Mutagen 会话同步，受限 Claude 内不能 SSH。已用注册的 `acmcoder-v3` 路径验证受限进程写入 → Mutagen 同步 → 外部 SSH 在 WSL 读取并断言内容一致，随后删除并同步清理临时文件。真实 Claude 生成仍需用户登录后验收；网络可达与文件同步不代表账号已可用。
+
+
+### Claude 独立工作区与越界申请
+
+打开「Claude 项目启动器」，先选择来源 Git 项目并给任务命名。副本位于来源项目的 `.claude-workspaces/<名称>`，有自己的 `.git` 与 `codex/claude-*` 分支，不共享主目录的 Git 元数据。仅复制已提交代码与提交历史，未提交改动、未跟踪文件和本地环境文件不会复制；已提交的内容仍会保留。准备工作区不需要 Claude 账号。已有同名副本只打开，不重置。
+
+本项目已经准备 `.claude-workspaces/claude`。中央私有映射登记独立 WSL 目录 `/home/pygmalion/runs/004-route-policy-hub/claude`、Mutagen 会话 `route-policy-hub-claude` 和保留端口 `43874`。新建其他工作区不会自动复用这个运行目录，使用 WSL 前必须另行登记。
+
+Read / Edit / Write / NotebookEdit / Glob / Grep 离开工作区时，Hook 只将路径、访问类型和工具名交给外部启动器，不复制文件内容。原生弹窗默认拒绝；批准只读文件或目录后，启动器重启并用 `--resume` 恢复同一会话，再重试原操作。读写文件需要授权父目录，以支持原子保存。授权只用于这次启动，不修改全局权限；下次重新启动默认无额外授权。整个主目录和包含启动器保护目录的范围不能被授权。
+
+任意 Shell 程序内部的文件访问不能靠 Hook 全面分析，外层限制仍会阻止其越界。如果工具报权限错误，需改用明确路径的文件工具提出申请。该方案不是整机隔离，也不代表 Claude 账号已经登录可用。无账号验证：`python3 -B scripts/test-claude-permissions.py`；已用无敏感夹具真实验证原生弹窗、只读授权、会话恢复和网络限制保留。
+
+### 浏览器、终端和恢复
+
+Mac 系统时区已设为 Asia/Singapore（与上海同为 UTC+8）。专用 Edge 使用 en-SG / en，阻止网站定位，禁用非代理 WebRTC UDP；不删除缓存、日志、本地 ID、钥匙串或登录状态。语言和网络配置不保证服务风控结果。
+
+本机 `.zshrc` 的 `Route Policy Hub terminal proxy` 标记区块让新交互终端的 HTTP(S) / ALL_PROXY 指向规则端口 7897，局域网和 Tailscale 地址例外。普通终端使用日常分流；专用启动器再覆盖为 17997。支持代理变量的工具在代理不可用时失败；不支持变量的工具依靠 TUN，Clash 完全退出后不保证普通程序系统级断网。没有将订阅转换为公开 API 中转，也未添加并发请求或自动换出口。
+
+恢复材料在忽略的 `data/usability-backup`：原时区记录、原终端配置、专用 Edge 偏好和原订阅脚本。终端恢复可移除 `.zshrc` 的标记区块并新开窗口；Edge 退出后恢复对应 Preferences；Clash 恢复备份脚本并重新激活订阅；时区可在系统设置改回原记录。恢复时不覆盖随后新增的其他个人配置。
