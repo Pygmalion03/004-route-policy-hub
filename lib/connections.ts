@@ -13,6 +13,7 @@ export type ConnectionStore = {
   webshare: { direct: Endpoint; backbone: Endpoint };
   airports: Airport[];
   vpsNodes?: VpsNode[];
+  webshareMethod?: 'direct' | 'backbone';
   defaults: Record<string, unknown>;
 };
 const location = () => path.join(process.env.DATA_DIR || path.join(process.cwd(), 'data'), 'connections.json');
@@ -35,6 +36,7 @@ export function publicConnections(store: ConnectionStore | null) {
   if (!store) return { configured: false };
   return {
     configured: true, updatedAt: store.updatedAt,
+    webshareMethod: store.webshareMethod || 'direct',
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
     airports: store.airports.map(({ id, name, nodes, refreshedAt, refreshError }) => ({ id, name, nodeCount: nodes.length, url: '', hasUrl: true, refreshedAt, refreshError })),
     vpsNodes: (store.vpsNodes || []).map(({ id, name, node }) => ({ id, name, server: node.server, port: node.port, type: node.type, hasConfig: true, shareUrl: '' })),
@@ -66,7 +68,7 @@ export async function saveConnections(input: unknown) {
   const operation = pending.catch(() => {}).then(async () => {
     const current = await readConnections();
     if (!current) throw new Error('请先导入本机已验证的配置');
-    const value = input as { updatedAt: string; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
+    const value = input as { updatedAt: string; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
     if (value.updatedAt !== current.updatedAt) throw new Error('配置已被其他页面修改，请重新读取后再保存');
     const vpsInput = value.vpsNodes ?? current.vpsNodes?.map(v => ({ id: v.id, name: v.name, shareUrl: '' })) ?? [];
     if (!Array.isArray(vpsInput) || vpsInput.length > 10) throw new Error('自建 VPS 数量不能超过 10 个');
@@ -110,7 +112,9 @@ export async function saveConnections(input: unknown) {
       if (typeof password !== 'string' || !password || password.length > 1000) throw new Error('代理密码无效');
       webshare[key] = { server, port, type: endpoint.type, username, password };
     }
-    const next: ConnectionStore = { ...current, airports, vpsNodes, webshare, updatedAt: new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString() };
+    const webshareMethod = value.webshareMethod ?? current.webshareMethod ?? 'direct';
+    if (!['direct', 'backbone'].includes(webshareMethod)) throw new Error('请选择 Direct 或 Backbone 接入');
+    const next: ConnectionStore = { ...current, airports, vpsNodes, webshare, webshareMethod, updatedAt: new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString() };
     await writeConnections(next);
     return next;
   });
@@ -146,9 +150,10 @@ export async function refreshConnections() {
 }
 export async function generateConfiguration(store: ConnectionStore, origin: string) {
   const proxies: Record<string, unknown>[] = [];
-  const exitNames = [`Webshare Direct ${store.webshare.direct.type.toUpperCase()}`, `Webshare Backbone ${store.webshare.backbone.type.toUpperCase()}`];
-  for (const [index, key] of (['direct', 'backbone'] as const).entries()) proxies.push({ ...store.webshare[key], name: exitNames[index], 'dialer-proxy': '前置线路' });
+  const endpoint = store.webshare[store.webshareMethod || 'direct'];
+  if (store.airports.length) proxies.push({ ...endpoint, name: 'Webshare · 机场通道', 'dialer-proxy': '机场节点' });
   const vpsNodes = store.vpsNodes || [];
+  if (vpsNodes.length) proxies.push({ ...endpoint, name: 'Webshare · VPS 通道', 'dialer-proxy': 'VPS 节点' });
   proxies.push(...vpsNodes.map(v => ({ ...v.node, name: `自建 VPS｜${v.name}` })));
   const providers = Object.fromEntries(store.airports.map((airport) => [airport.id, {
     type: 'inline', payload: airport.nodes,
@@ -156,13 +161,16 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     'exclude-filter': '剩余流量|套餐到期|官网|TG群|有超时',
     'health-check': { enable: false, url: 'https://www.gstatic.com/generate_204', interval: 600, lazy: true },
   }]));
+  const plans = [
+    ...(store.airports.length ? [{ name: '机场＋Webshare', proxy: 'Webshare · 机场通道' }] : []),
+    ...(vpsNodes.length ? [{ name: 'VPS＋Webshare', proxy: 'Webshare · VPS 通道' }, { name: '只用 VPS', proxy: 'VPS 节点' }] : []),
+    ...(store.airports.length ? [{ name: '只用机场', proxy: '机场节点' }] : []),
+  ];
   const groups = [
-    { name: '出口模式', type: 'select', proxies: ['固定出口', ...(vpsNodes.length ? ['VPS 直出'] : []), ...(store.airports.length ? ['机场直出'] : [])] },
-    { name: '固定出口', type: 'select', proxies: exitNames },
-    { name: '前置线路', type: 'select', proxies: [...(store.airports.length ? ['前置机场'] : []), ...(vpsNodes.length ? ['自建 VPS'] : [])] },
-    ...(store.airports.length ? [{ name: '前置机场', type: 'select', proxies: store.airports.map((a) => `${a.name}节点`) }, { name: '机场直出', type: 'select', proxies: ['前置机场'] }] : []),
-    ...(vpsNodes.length ? [{ name: '自建 VPS', type: 'select', proxies: vpsNodes.map(v => `自建 VPS｜${v.name}`) }, { name: 'VPS 直出', type: 'select', proxies: ['自建 VPS'] }] : []),
-    ...store.airports.map((a) => ({ name: `${a.name}节点`, type: 'select', use: [a.id] })),
+    { name: '使用方案', type: 'select', proxies: plans.map(p => p.name) },
+    ...(store.airports.length ? [{ name: '机场节点', type: 'select', use: store.airports.map(a => a.id), 'empty-fallback': 'REJECT' }] : []),
+    ...(vpsNodes.length ? [{ name: 'VPS 节点', type: 'select', hidden: vpsNodes.length === 1, proxies: vpsNodes.map(v => `自建 VPS｜${v.name}`) }] : []),
+    ...plans.map(p => ({ name: p.name, type: 'select', hidden: true, proxies: [p.proxy] })),
   ];
   const policy = await readPolicyStore();
   const privateRules = [
@@ -176,11 +184,11 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     `hub-${action}`, { type: 'http', behavior: 'classical', format: 'yaml', url: `${origin}/rules/${action}.yaml`, path: `./rule_providers/hub-${action}.yaml`, interval: 300, proxy: 'DIRECT', payload: policy.policies.filter(p => p.enabled && p.action === action.toUpperCase()).flatMap(p => p.matchers.map(m => `${m.type},${m.value}${m.noResolve ? ',no-resolve' : ''}`)) },
   ]));
   return {
-    ...JSON.parse(JSON.stringify(store.defaults).replaceAll('#固定出口', '#出口模式')), 'mixed-port': 7897, 'allow-lan': false, mode: 'rule', 'log-level': 'warning', ipv6: false,
+    ...JSON.parse(JSON.stringify(store.defaults).replaceAll('#固定出口', '#使用方案').replaceAll('#出口模式', '#使用方案')), 'mixed-port': 7897, 'allow-lan': false, mode: 'rule', 'log-level': 'warning', ipv6: false,
     profile: { 'store-selected': true },
     proxies, 'proxy-providers': providers, 'proxy-groups': groups,
-    listeners: [{ name: 'AI 专用出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '出口模式' }],
+    listeners: [{ name: 'AI 专用出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '使用方案' }],
     'rule-providers': ruleProviders,
-    rules: [...privateRules, 'RULE-SET,hub-proxy,出口模式', 'RULE-SET,hub-direct,DIRECT', 'MATCH,出口模式'],
+    rules: [...privateRules, 'RULE-SET,hub-proxy,使用方案', 'RULE-SET,hub-direct,DIRECT', 'MATCH,使用方案'],
   };
 }

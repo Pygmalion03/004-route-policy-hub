@@ -9,7 +9,17 @@ export async function GET(request: Request) {
 }
 export async function PUT(request: Request) {
   if (!connectionAuthorized(request)) return Response.json({ error: '请先解锁编辑' }, { status: 401, headers });
-  try { return Response.json(publicConnections(await saveConnections(await request.json())), { headers }); }
+  try {
+    const previous = await readConnections();
+    const next = await saveConnections(await request.json());
+    const names = (store: typeof previous) => store ? [
+      ...store.airports.flatMap(a => a.nodes.map(n => `${a.name}｜${n.name}`)),
+      ...(store.vpsNodes || []).map(v => `自建 VPS｜${v.name}`),
+    ] : [];
+    const retained = new Set(names(next));
+    const removedNodeCount = names(previous).filter(name => !retained.has(name)).length;
+    return Response.json({ ...publicConnections(next), removedNodeCount }, { headers });
+  }
   catch (error) { return Response.json({ error: error instanceof Error ? error.message : '保存失败' }, { status: 400, headers }); }
 }
 export async function POST(request: Request) {
