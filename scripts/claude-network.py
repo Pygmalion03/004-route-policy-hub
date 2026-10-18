@@ -106,7 +106,7 @@ def browser(url=None):
         page = '''<!doctype html><meta charset="utf-8"><title>Claude 专用 Edge</title><style>body{font:18px system-ui;max-width:760px;margin:80px auto;line-height:1.8;color:#173c31}a{color:#12604c}</style><h1>Claude 专用 Edge</h1><p>本次启动已核对固定出口与 LuLu 规则。日常网络切换不改变这里的出口。</p><p>请保持 Clash 与 LuLu 运行。代理不可用时停止连接，不改走其他线路。</p><p><a href="https://claude.ai/">打开 Claude</a> · <a href="https://ipv4.webshare.io/">核对当前出口</a></p>'''
     start = LOCAL/'browser-start.html'; private_write(start,page)
     user_data = LOCAL/'Claude Edge'; user_data.mkdir(parents=True,exist_ok=True,mode=0o700)
-    args=['/usr/bin/arch','-arm64',str(edge),'--user-data-dir='+str(user_data),'--no-first-run','--no-default-browser-check','--disable-quic','--disable-background-networking','--force-webrtc-ip-handling-policy=disable_non_proxied_udp','--proxy-server=http://127.0.0.1:17997','--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE localhost','--new-window',start.as_uri()]
+    args=['/usr/bin/arch','-arm64',str(edge),'--user-data-dir='+str(user_data),'--no-first-run','--no-default-browser-check','--disable-quic','--disable-background-networking','--force-webrtc-ip-handling-policy=disable_non_proxied_udp','--proxy-server=http://127.0.0.1:17997','--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE localhost , EXCLUDE 127.0.0.1','--new-window',start.as_uri()]
     subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
     print('固定出口与 LuLu 规则已核对，已请求打开 Claude 专用 Edge。')
 
