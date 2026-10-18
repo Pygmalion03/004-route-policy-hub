@@ -202,7 +202,7 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     profile: { 'store-selected': true },
     proxies, 'proxy-providers': providers, 'proxy-groups': groups,
     listeners: [
-      { name: '现有 AI 出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '使用方案' },
+      { name: 'AI 专用出口', type: 'mixed', listen: '127.0.0.1', port: 17897, proxy: '使用方案' },
       ...(claudeName ? [{ name: 'Claude 专用入口', type: 'mixed', listen: '127.0.0.1', port: 17997, proxy: claudeName }] : []),
     ],
     'rule-providers': ruleProviders,
