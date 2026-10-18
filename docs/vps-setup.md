@@ -1,6 +1,6 @@
 # 自建 VPS 与出口模式
 
-网站维护机场、VLESS REALITY 节点及 Webshare 参数，Clash 手动决定实际使用方式。
+网站维护机场、VLESS REALITY / Hysteria2 节点及 Webshare 参数，Clash 手动决定实际使用方式。
 新增 VPS 不会自动切换电脑出口。没有可用代理节点前，仅有主机 IP 和 SSH 信息不能作为 Clash 节点。
 
 | 使用方式 | Clash 选择 | 最终出口 |
@@ -20,6 +20,11 @@ Clash 仅展示「使用方案」「机场节点」及多台 VPS 时的「VPS �
 Webshare 可粘贴官网 curl、HTTP / SOCKS5 URL 或 地址:端口:用户名:密码，浏览器内解析。
 Direct / Backbone 参数分别保留，发布时选定一个供两个 Webshare 方案共用。
 网站没有本机控制通道，不报告本机已应用或实测通过。
+
+## Mac 当前线路（2026-10-19）
+
+Mac 日常已切换至 Hysteria2，原 VLESS REALITY / Vision 保留为手动备用。Claude 的专用 VLESS 配置独立保留，UU、荣耀、局域网、Tailscale 和手动直连规则保持不变。
+部署、验证和切回方式见 [切换记录](deployments/2026-10-19-hysteria2-cutover.md)。下方 10 月 18 日数据为历史验收。
 
 ## 准备与部署
 
