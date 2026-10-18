@@ -29,7 +29,7 @@ python3 scripts/vps-bootstrap.py --host VPS_IP --ssh-port 61234 --output data/le
 不要把节点链接、UUID、REALITY 客户端材料或服务器私钥放进聊天或 Git。
 
 首次安装需要已获授权的 SSH 密钥，或密码库注入的 `VPS_SSH_PASSWORD`。
-密码库使用 `codex/legend-vps` 登录条目的密码字段。不存在该条目时由用户在自己的
+密码库使用 `legend-vps` 登录条目的密码字段。不存在该条目时由用户在自己的
 密码库界面填写；需要解锁时在用户 Terminal 运行现有解锁工具。
 
 ```sh
@@ -40,7 +40,7 @@ python3 scripts/vps-bootstrap.py --host VPS_IP --ssh-port 61234 --output data/le
 
 部署脚本经 SSH 标准输入传配置，密码仅通过环境与 SSH askpass 内部传递；不写磁盘或命令参数。
 它会检查端口冲突、拒绝覆盖非本项目配置，从官方发布下载 Linux 二进制并核验 SHA256，
-检查配置后启动 `route-policy-xray.service`。默认监听 TCP 443，以 nobody 运行，仅赋予绑定低端口能力。
+检查配置后启动 `route-policy-xray.service`。默认监听 TCP 443，以专用系统账户 route-hub-xray 运行，仅赋予绑定低端口能力。
 不修改 SSH 登录策略或系统防火墙。主机防火墙或服务商防火墙阻断时，需依据真实失败再处理。
 服务器端拒绝访问私有 / 本地网段，不提供无认证 SOCKS 或 HTTP 入口。
 
@@ -54,17 +54,31 @@ python3 scripts/vps-bootstrap.py --host VPS_IP --ssh-port 61234 --output data/le
 3. 对所选模式制造测试故障，确认请求失败且没有自动改走其他出口。
 4. 验证后才切换日常连接；保留原订阅和当前机场节点作为手动恢复路径。
 
-## 本次准备状态
+## 本次部署与验收（2026-10-18）
 
-Legend 的 SSH 服务已响应，但当前没有可用登录凭据：已有默认 SSH 密钥被拒绝，
-自托管密码库锁定，浏览器没有 Legend 登录会话。未登录服务器、未安装代理、未测出 VPS 的真实代理延迟。
-本机已生成一套私有材料并检查官方 Xray 能解析服务端配置；这不等于 VPS 已部署或可用。
+已通过密码库 `legend-vps` 登录并核对服务器身份，安装官方 Xray 服务。
+REALITY 的 Microsoft 目标在本次环境下导致握手失败；更换为 Apple 目标后真实请求成功，
+部署脚本默认目标同步修正。服务使用专用系统账户，日志恢复 warning。
+
+密码库应看 `codex_authorized`：普通 `cli_status: locked` 不代表 Codex 钥匙串会话无效；
+本次 `codex_authorized: true`，无需用户重复解锁。
+
+使用独立 Mihomo 通过物理网络连接 VPS，服务重启完成后分别执行五轮、每轮四个 HTTPS 请求：
+
+| 路径 | 出口检查 | GitHub 中位数 | Anthropic 中位数 | OpenAI 中位数 | 超时 / 失败 |
+| --- | --- | --- | --- | --- | --- |
+| VPS 直出 | 五次均为购买的 VPS IPv4 | 0.91 秒 | 0.68 秒 | 1.10 秒 | 0 / 0 |
+| VPS + Webshare | 五次均为原 Webshare IPv4 | 2.74 秒 | 2.08 秒 | 2.12 秒 | 0 / 0 |
+
+AI 接口返回 401，只证明 HTTPS/API 可达；未登录 Claude / OpenAI 账号执行生成。
+这是一次短时样本，不能据此保证长期稳定或账号风控结果。原始报告只保存在忽略的 `data/`。
+服务调整期间的初轮请求有一次被重启中断，上表使用服务调整完成后的整轮结果。
 
 参考：[Xray REALITY](https://xtls.github.io/en/config/transports/reality.html)、
 [Mihomo VLESS](https://wiki.metacubex.one/en/config/proxies/vless/)、
 [官方发布](https://github.com/XTLS/Xray-core/releases/tag/v26.3.27)。
 
-## 测量脚本与尚未完成的检查
+## 测量脚本
 
 `scripts/measure-proxy.py` 只通过指定的本机代理重复实际 HTTPS 请求，不切换线路，
 记录状态码、连接 / TLS / 总耗时、超时数量、中位数和小样本 p95，报告写入私有 `data/`：
@@ -74,10 +88,12 @@ python3 scripts/measure-proxy.py --proxy http://127.0.0.1:18998 --rounds 5
 ```
 
 默认 18998 是隔离测试端口，需要先启动相应测试内核；不要把它当作日常端口。
-17897 可测试当前手动选择的 AI 出口。脚本已经通过现有 Webshare 完成真实请求验收，
-这不算 Legend 测试结果。没有把 401 或 IP 风险分数当作账号生成成功。
+17897 可测试当前手动选择的 AI 出口。本次两种 Legend 路径的验收结果见上表。没有把 401 或 IP 风险分数当作账号生成成功。
 
-本机 Xray 服务端与 Mihomo 客户端的回环 REALITY 测试出现握手失败，尚未定位；
-已核对生成密钥对一致、目标支持 TLS 1.3。由于真实 VPS 尚不能登录，不能把
-配置解析成功表述为 REALITY 链路已可用。待登录后应在真实服务器继续验证或调整协议，
-在此之前不要将准备好的节点加入日常使用。没有向 NAS 添加这个未验收节点。
+先前 Microsoft 目标下的握手失败已在真实 VPS 定位并通过更换目标解决。
+节点已添加到 NAS 的「自建 VPS」。日常默认固定 Webshare，切换方式见文首表格。
+
+隔离测试中将 VPS 地址改为不可达后，VPS 直出和 VPS + Webshare 都按预期失败，没有自动切换出口。
+Clash 已刷新并核对实际运行节点与已验证材料一致；当前仍选择固定出口 + 前置机场。
+AI 专用端口确认保留原固定出口，Magpie 网关未登录检查为 401。
+用户报告刷新附近发生过 502 并由 OpenCode 修复，本次未取得该故障根因证据，不能据恢复状态断言已彻底根治。

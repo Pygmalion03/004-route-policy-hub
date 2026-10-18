@@ -18,7 +18,7 @@ parser.add_argument('--host', help='VPS IP; omitted when reusing a prepared inve
 parser.add_argument('--ssh-port', type=int, default=61234)
 parser.add_argument('--port', type=int, default=443)
 parser.add_argument('--name', default='Legend SG')
-parser.add_argument('--sni', default='www.microsoft.com')
+parser.add_argument('--sni', default='www.apple.com')
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--deploy', action='store_true')
 args = parser.parse_args()
@@ -104,7 +104,11 @@ executable=binary_dir/'xray.next';executable.write_bytes(binary);executable.chmo
 root.mkdir(mode=0o750,exist_ok=True)
 config_path=root/'config.json';temporary=root/'config.next.json';temporary.write_text(json.dumps(CONFIG));temporary.chmod(0o600)
 subprocess.run([str(executable),'run','-test','-config',str(temporary)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-account=pwd.getpwnam('nobody');os.chown(root,0,account.pw_gid);root.chmod(0o750)
+try:account=pwd.getpwnam('route-hub-xray')
+except KeyError:
+ subprocess.run(['useradd','--system','--no-create-home','--shell','/usr/sbin/nologin','route-hub-xray'],check=True)
+ account=pwd.getpwnam('route-hub-xray')
+os.chown(root,0,account.pw_gid);root.chmod(0o750)
 os.chown(temporary,account.pw_uid,account.pw_gid)
 if config_path.exists():shutil.copy2(config_path,root/'config.before-update.json')
 os.replace(temporary,config_path)
@@ -115,7 +119,7 @@ Description=Route Policy Hub VLESS REALITY
 After=network-online.target
 Wants=network-online.target
 [Service]
-User=nobody
+User=route-hub-xray
 ExecStart=/usr/local/lib/route-policy-hub/xray run -config /etc/route-policy-xray/config.json
 Restart=on-failure
 RestartSec=3
