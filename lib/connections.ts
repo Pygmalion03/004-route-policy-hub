@@ -15,7 +15,7 @@ export type ConnectionStore = {
   airports: Airport[];
   vpsNodes?: VpsNode[];
   webshareMethod?: 'direct' | 'backbone';
-  claude?: { expectedIp: string; pinnedAt: string; frontName: string; endpoint: Endpoint; front: Node };
+  claude?: { mode?: 'vps' | 'webshare'; expectedIp: string; pinnedAt: string; frontName: string; endpoint?: Endpoint; front: Node };
   defaults: Record<string, unknown>;
 };
 const location = () => path.join(process.env.DATA_DIR || path.join(process.cwd(), 'data'), 'connections.json');
@@ -39,7 +39,7 @@ export function publicConnections(store: ConnectionStore | null) {
   return {
     configured: true, updatedAt: store.updatedAt,
     webshareMethod: store.webshareMethod || 'direct',
-    claude: store.claude ? { expectedIp: store.claude.expectedIp, pinnedAt: store.claude.pinnedAt, frontName: store.claude.frontName, port: 17997 } : null,
+    claude: store.claude ? { mode: store.claude.mode || 'webshare', expectedIp: store.claude.expectedIp, pinnedAt: store.claude.pinnedAt, frontName: store.claude.frontName, port: 17997 } : null,
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
     airports: store.airports.map(({ id, name, nodes, refreshedAt, refreshError }) => ({ id, name, nodeCount: nodes.length, url: '', hasUrl: true, refreshedAt, refreshError })),
     vpsNodes: (store.vpsNodes || []).map(({ id, name, node }) => ({ id, name, server: node.server, port: node.port, type: node.type, hasConfig: true, shareUrl: '' })),
@@ -71,7 +71,7 @@ export async function saveConnections(input: unknown) {
   const operation = pending.catch(() => {}).then(async () => {
     const current = await readConnections();
     if (!current) throw new Error('请先导入本机已验证的配置');
-    const value = input as { updatedAt: string; pinClaude?: { vpsId: string; expectedIp: string }; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
+    const value = input as { updatedAt: string; pinClaude?: { vpsId: string; expectedIp: string; mode?: 'vps' | 'webshare' }; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
     if (value.updatedAt !== current.updatedAt) throw new Error('配置已被其他页面修改，请重新读取后再保存');
     const vpsInput = value.vpsNodes ?? current.vpsNodes?.map(v => ({ id: v.id, name: v.name, shareUrl: '' })) ?? [];
     if (!Array.isArray(vpsInput) || vpsInput.length > 10) throw new Error('自建 VPS 数量不能超过 10 个');
@@ -122,7 +122,9 @@ export async function saveConnections(input: unknown) {
       const front = vpsNodes.find(v => v.id === value.pinClaude!.vpsId);
       const expectedIp = String(value.pinClaude.expectedIp || '').trim();
       if (!front || !isIP(expectedIp)) throw new Error('请选择已配置的 VPS，并填写已核实的固定出口 IP');
-      next.claude = { expectedIp, pinnedAt: next.updatedAt, frontName: front.name, endpoint: { ...webshare[webshareMethod] }, front: { ...front.node } };
+      const mode = value.pinClaude.mode || 'webshare';
+      if (!['vps', 'webshare'].includes(mode)) throw new Error('请选择 Claude 专用路线');
+      next.claude = { mode, expectedIp, pinnedAt: next.updatedAt, frontName: front.name, ...(mode === 'webshare' ? { endpoint: { ...webshare[webshareMethod] } } : {}), front: { ...front.node } };
     }
     await writeConnections(next);
     return next;
@@ -165,7 +167,8 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
   if (vpsNodes.length) proxies.push({ ...endpoint, name: 'Webshare · VPS 通道', 'dialer-proxy': 'VPS 节点' });
   proxies.push(...vpsNodes.map(v => ({ ...v.node, name: `自建 VPS｜${v.name}` })));
   const claudeName = store.claude ? `Claude 固定出口｜${store.claude.expectedIp}` : null;
-  if (store.claude) proxies.push(
+  if (store.claude?.mode === 'vps') proxies.push({ ...store.claude.front, name: claudeName! });
+  else if (store.claude) proxies.push(
     { ...store.claude.front, name: 'Claude 专用前置' },
     { ...store.claude.endpoint, name: claudeName!, 'dialer-proxy': 'Claude 专用前置' },
   );

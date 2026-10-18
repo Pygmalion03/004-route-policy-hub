@@ -14,6 +14,7 @@ type View = {
   configured: boolean;
   updatedAt: string;
   claude: {
+    mode: 'vps' | 'webshare';
     expectedIp: string;
     frontName: string;
     pinnedAt: string;
@@ -27,6 +28,7 @@ export function ClaudeConsole() {
     [password, setPassword] = useState(''),
     [message, setMessage] = useState('');
   const [vpsId, setVpsId] = useState(''),
+    [mode, setMode] = useState<'vps' | 'webshare'>('vps'),
     [expectedIp, setExpectedIp] = useState(''),
     [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false);
@@ -46,6 +48,7 @@ export function ClaudeConsole() {
       setPassword('');
       setData(result);
       setVpsId(result.vpsNodes?.[0]?.id || '');
+      setMode(result.claude?.mode || 'vps');
       setExpectedIp(
         result.claude?.expectedIp || result.webshare?.direct?.server || '',
       );
@@ -69,6 +72,7 @@ export function ClaudeConsole() {
         if (active) {
           setData(result);
           setVpsId(result.vpsNodes?.[0]?.id || '');
+          setMode(result.claude?.mode || 'vps');
           setExpectedIp(
             result.claude?.expectedIp || result.webshare?.direct?.server || '',
           );
@@ -94,7 +98,7 @@ export function ClaudeConsole() {
           'x-admin-password':
             sessionStorage.getItem('route-list-password') || '',
         },
-        body: JSON.stringify({ ...data, pinClaude: { vpsId, expectedIp } }),
+        body: JSON.stringify({ ...data, pinClaude: { vpsId, expectedIp, mode } }),
       });
       const result = await r.json();
       if (!r.ok) throw new Error(result.error);
@@ -175,8 +179,8 @@ export function ClaudeConsole() {
               </p>
               <p className="mt-3 text-sm opacity-80">
                 {data.claude
-                  ? `本机 → ${data.claude.frontName} → Webshare`
-                  : '选择一台已部署 VPS，连接到固定 Webshare 出口。'}
+                  ? `本机 → ${data.claude.frontName}${data.claude.mode === 'webshare' ? ' → Webshare' : '（VPS 固定直出）'}`
+                  : '选择一台已部署 VPS，设置独立固定出口。'}
               </p>
               <p className="mt-4 text-xs leading-6 opacity-80">
                 专用端口 17997 · 不自动切换其他出口 · 不使用国内直连清单
@@ -201,8 +205,9 @@ export function ClaudeConsole() {
                   <Copy className="size-4" />
                   复制 Claude Code 启动命令
                 </Button>
-                <Button variant="outline" disabled>
-                  浏览器防护待确认
+                <Button variant="outline" onClick={() => void copy('~/Documents/Codex/Projects/004-route-policy-hub/scripts/claude-browser.command')}>
+                  <Copy className="size-4" />
+                  复制专用 Edge 启动命令
                 </Button>
               </div>
             </section>
@@ -218,7 +223,7 @@ export function ClaudeConsole() {
               <div>
                 <h2 className="text-sm font-medium">本机出口与限制</h2>
                 <p className="mt-2 text-xs leading-6 text-muted-foreground">
-                  命令行限制由安全启动器启用；浏览器系统级出站防护尚待配置与验收。网站无法读取实时状态
+                  命令行使用网络限制；Edge 启动器核对 LuLu 扩展与规则，未就绪时拒绝打开。网站无法读取本机实时保护状态。
                 </p>
               </div>
               <div>
@@ -231,8 +236,7 @@ export function ClaudeConsole() {
             <section className="mb-6 rounded-2xl border bg-card p-5">
               <h2 className="font-semibold">仅在确实要更换固定出口时更新</h2>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                专用配置保留前置节点和 Webshare
-                参数的独立副本。日常网络中的参数变更不会同步覆盖；确认新 IP
+                专用配置保留所选路线参数的独立副本。日常网络中的参数变更不会同步覆盖；确认新 IP
                 后，在这里重新发布。
               </p>
               {!editing ? (
@@ -248,6 +252,13 @@ export function ClaudeConsole() {
                 </Button>
               ) : (
                 <fieldset disabled={busy} className="mt-5 space-y-4">
+                  <label htmlFor="claude-mode" className="block text-sm">
+                    专用路线
+                    <NativeSelect id="claude-mode" className="mt-2 w-full" value={mode} onChange={(e) => setMode(e.target.value as 'vps' | 'webshare')}>
+                      <NativeSelectOption value="vps">VPS 固定直出</NativeSelectOption>
+                      <NativeSelectOption value="webshare">VPS＋Webshare</NativeSelectOption>
+                    </NativeSelect>
+                  </label>
                   <label htmlFor="claude-front" className="block text-sm">
                     使用哪台 VPS
                     <NativeSelect
@@ -273,7 +284,7 @@ export function ClaudeConsole() {
                     />
                   </label>
                   <p className="text-xs leading-6 text-muted-foreground">
-                    发布时使用日常网络里当前选定的 Webshare 端点，之后独立保存。
+                    {mode === 'webshare' ? '发布时复制当前 VPS 和 Webshare 端点，之后独立保存。' : '发布时复制所选 VPS 节点，之后独立保存；出口 IP 请填写该 VPS 实际公网出口。'}
                   </p>
                   <div className="flex gap-3">
                     <Button

@@ -18,6 +18,9 @@ const isSite = (p: Policy) =>
   p.matchers.every((m) => m.type === 'DOMAIN-SUFFIX');
 const view = (store: Awaited<ReturnType<typeof readPolicyStore>>) => ({
   updatedAt: store.updatedAt,
+  uuDirect: store.policies.some(
+    (p) => p.id === 'uu-remote' && p.enabled && p.action === 'DIRECT',
+  ),
   sites: store.policies
     .filter(isSite)
     .map((p) => ({ id: p.id, domain: p.matchers[0].value })),
@@ -37,6 +40,11 @@ async function update(request: Request, remove: boolean) {
       if (!store.policies.some((p) => p.id === input.id && isSite(p)))
         throw new Error('未找到这条直连网站');
       store.policies = store.policies.filter((p) => p.id !== input.id);
+    } else if (input.application === 'uu-remote') {
+      const policy = store.policies.find((p) => p.id === 'uu-remote');
+      if (!policy) throw new Error('未找到 UU 远程应用规则');
+      policy.enabled = true;
+      policy.action = 'DIRECT';
     } else {
       const raw = String(input.domain || '').trim();
       let url: URL;

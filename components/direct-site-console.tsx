@@ -6,7 +6,7 @@ import { HubNav } from '@/components/hub-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-type View = { updatedAt: string; sites: { id: string; domain: string }[] };
+type View = { updatedAt: string; uuDirect: boolean; sites: { id: string; domain: string }[] };
 export function DirectSiteConsole() {
   const [data, setData] = useState<View | null>(null),
     [domain, setDomain] = useState('');
@@ -46,7 +46,7 @@ export function DirectSiteConsole() {
     setUnlocked(true);
     setMessage('已解锁');
   }
-  async function update(id?: string) {
+  async function update(id?: string, application?: 'uu-remote') {
     if (!data) return;
     setBusy(true);
     setMessage('');
@@ -60,7 +60,7 @@ export function DirectSiteConsole() {
         },
         body: JSON.stringify({
           updatedAt: data.updatedAt,
-          ...(id ? { id } : { domain }),
+          ...(id ? { id } : application ? { application } : { domain }),
         }),
       });
       const result = await r.json();
@@ -71,7 +71,9 @@ export function DirectSiteConsole() {
       setData(result);
       setDomain('');
       setMessage(
-        id
+        application
+          ? 'UU 远程已设为直连，约五分钟更新。Claude 专用入口继续使用固定代理。'
+          : id
           ? '已移除。该网站恢复跟随日常方案，约五分钟更新。'
           : '已添加。该网站及其子域名会直连，约五分钟更新。',
       );
@@ -150,6 +152,17 @@ export function DirectSiteConsole() {
             </p>
           </section>
         )}
+        <section className="mb-6 rounded-2xl border bg-card p-5">
+          <h2 className="font-semibold">UU 远程</h2>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            按应用进程直连，减少代理流量消耗。此例外不影响 Claude 专用入口。
+          </p>
+          <Button className="mt-3" variant="outline"
+            disabled={!data || !unlocked || busy || data.uuDirect}
+            onClick={() => void update(undefined, 'uu-remote')}>
+            {data?.uuDirect ? '已启用直连' : '启用 UU 远程直连'}
+          </Button>
+        </section>
         {message && (
           <output
             className="mb-5 block rounded-xl border bg-card p-4 text-sm"

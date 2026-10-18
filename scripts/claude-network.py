@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import plistlib
 import subprocess
 import sys
 import time
@@ -69,9 +70,31 @@ def capture_auth(url):
     private_write(LOCAL/'pending-auth.json',json.dumps({'url':url,'createdAt':time.time()}))
     print('登录地址已留在本机。请打开「Claude 专用浏览器」，不要用日常浏览器登录。')
 
+def browser_guard():
+    base = Path('/Library/Objective-See/LuLu')
+    try:
+        prefs = plistlib.loads((base/'preferences.plist').read_bytes())
+        assert not any(prefs.get(k) for k in ['disabled','allowLocalHost','useAllowList','passiveMode','currentProfile'])
+        state = subprocess.run(['/usr/bin/systemextensionsctl','list'],capture_output=True,text=True,check=True).stdout
+        assert any('com.objective-see.lulu.extension' in line and '[activated enabled]' in line for line in state.splitlines())
+        objects = plistlib.loads((base/'rules.plist').read_bytes())['$objects']
+        def ref(value):
+            while isinstance(value,plistlib.UID): value = None if value.data == 0 else objects[value.data]
+            return value
+        ids = ['com.microsoft.edgemac','com.microsoft.edgemac.helper','com.microsoft.edgemac.helper.renderer']
+        for identifier in ids:
+            key = identifier+':Developer ID Application: Microsoft Corporation (UBF8T346G9)'
+            rules = [{k:ref(v) for k,v in item.items()} for item in objects if isinstance(item,dict) and 'endpointAddr' in item and ref(item.get('key'))==key and not ref(item.get('isDisabled'))]
+            assert any(r.get('action')==0 and r.get('endpointAddr')=='*' and r.get('endpointPort')=='*' and not r.get('pid') and not r.get('expiration') for r in rules)
+            allowed = [r for r in rules if r.get('action')==1]
+            assert allowed and all(r.get('endpointAddr')=='127.0.0.1' and r.get('endpointPort')=='17997' for r in allowed)
+    except (OSError,ValueError,KeyError,AssertionError,subprocess.SubprocessError):
+        raise SetupError('Edge 防火墙保护未就绪或规则已改变，已停止打开浏览器。请先检查 LuLu 扩展、回环例外和 Edge 规则。')
+
 def browser(url=None):
-    chrome = Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-    if not chrome.exists(): raise SetupError('未找到 Google Chrome。')
+    browser_guard()
+    edge = Path('/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge')
+    if not edge.exists(): raise SetupError('未找到 Microsoft Edge。')
     pending = LOCAL/'pending-auth.json'
     if not url and pending.exists():
         item = json.loads(pending.read_text())
@@ -80,12 +103,12 @@ def browser(url=None):
     if url:
         page = '<!doctype html><meta charset="utf-8"><title>Claude 专用登录</title><script>location.replace('+json.dumps(url).replace('<','\\u003c')+')</script>'
     else:
-        page = '''<!doctype html><meta charset="utf-8"><title>Claude 专用浏览器</title><style>body{font:18px system-ui;max-width:760px;margin:80px auto;line-height:1.8;color:#173c31}a{color:#12604c}</style><h1>Claude 专用浏览器</h1><p>本浏览器固定使用 Claude 专用代理。与日常浏览器的数据和代理设置分开。</p><p>代理断开时页面连接应失败；浏览器系统级出站防护仍需单独配置和验收。</p><p><a href="https://claude.ai/">打开 Claude</a> · <a href="https://ipv4.webshare.io/">核对当前出口</a></p>'''
+        page = '''<!doctype html><meta charset="utf-8"><title>Claude 专用 Edge</title><style>body{font:18px system-ui;max-width:760px;margin:80px auto;line-height:1.8;color:#173c31}a{color:#12604c}</style><h1>Claude 专用 Edge</h1><p>本次启动已核对固定出口与 LuLu 规则。日常网络切换不改变这里的出口。</p><p>请保持 Clash 与 LuLu 运行。代理不可用时停止连接，不改走其他线路。</p><p><a href="https://claude.ai/">打开 Claude</a> · <a href="https://ipv4.webshare.io/">核对当前出口</a></p>'''
     start = LOCAL/'browser-start.html'; private_write(start,page)
-    user_data = LOCAL/'Claude Browser'; user_data.mkdir(parents=True,exist_ok=True,mode=0o700)
-    args=['/usr/bin/arch','-arm64',str(chrome),'--user-data-dir='+str(user_data),'--no-first-run','--no-default-browser-check','--disable-quic','--force-webrtc-ip-handling-policy=disable_non_proxied_udp','--proxy-server=http://127.0.0.1:17997','--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE localhost','--new-window',start.as_uri()]
+    user_data = LOCAL/'Claude Edge'; user_data.mkdir(parents=True,exist_ok=True,mode=0o700)
+    args=['/usr/bin/arch','-arm64',str(edge),'--user-data-dir='+str(user_data),'--no-first-run','--no-default-browser-check','--disable-quic','--disable-background-networking','--force-webrtc-ip-handling-policy=disable_non_proxied_udp','--proxy-server=http://127.0.0.1:17997','--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE localhost','--new-window',start.as_uri()]
     subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
-    print('已请求打开 Claude 专用浏览器。系统级浏览器出站限制尚未启用，不能标记为完整防漏。')
+    print('固定出口与 LuLu 规则已核对，已请求打开 Claude 专用 Edge。')
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--runtime',type=Path,default=RUNTIME)
