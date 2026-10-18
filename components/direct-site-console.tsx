@@ -75,7 +75,7 @@ export function DirectSiteConsole() {
         application
           ? 'UU 远程已设为直连，约五分钟更新。Claude 专用入口继续使用固定代理。'
           : id
-          ? '已移除。该网站恢复国内自动直连、国外走日常方案，约五分钟更新。'
+          ? '已移除。该网站恢复客户端默认策略，约五分钟更新；Mac 默认代理，通用订阅国内直连、国外代理。'
           : `已添加。该网站及其子域名${action === 'DIRECT' ? '直连' : '走日常代理'}，约五分钟更新。`,
       );
     } catch (e) {
@@ -91,7 +91,7 @@ export function DirectSiteConsole() {
         <p className="text-xs tracking-widest text-primary">只管理例外</p>
         <h1 className="mt-2 text-3xl font-semibold">网站例外</h1>
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          国内网站自动直连，国外网站走 Clash「使用方案」。这里仅添加需要覆盖自动分流的网站；移除例外后恢复自动判断。
+          Mac 除直连例外外默认走代理；通用订阅国内直连、国外代理。这里管理共用的网站例外；移除后恢复各客户端的默认策略。
         </p>
         <div className="my-6 rounded-2xl border border-primary/20 bg-secondary/40 p-5 text-sm leading-7">
           <strong>这份清单不影响 Claude 专用入口。</strong>
@@ -152,7 +152,7 @@ export function DirectSiteConsole() {
               </Button>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              例外优先于国内自动分流。保存即发布，Clash 约五分钟更新；不影响 Claude 专用入口。
+              例外优先于客户端默认策略。保存即发布，Clash 约五分钟更新；不影响 Claude 专用入口。
             </p>
           </section>
         )}
@@ -211,7 +211,7 @@ export function DirectSiteConsole() {
           ) : (
             <p className="py-8 text-sm text-muted-foreground">
               {data
-                ? '还没有添加网站。国内自动直连，国外走日常代理。'
+                ? '还没有添加网站例外，各客户端按自己的默认策略连接。'
                 : '正在读取…'}
             </p>
           )}

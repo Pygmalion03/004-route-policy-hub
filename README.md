@@ -158,7 +158,7 @@ Mac 项目修改由外部独立 Mutagen 会话同步，受限 Claude 内不能 S
 
 ### Claude 独立工作区与越界申请
 
-打开「Claude 项目启动器」，先选择来源 Git 项目并给任务命名。副本位于来源项目的 `.claude-workspaces/<名称>`，有自己的 `.git` 与 `codex/claude-*` 分支，不共享主目录的 Git 元数据。仅复制已提交代码与提交历史，未提交改动、未跟踪文件和本地环境文件不会复制；已提交的内容仍会保留。准备工作区不需要 Claude 账号。已有同名副本只打开，不重置。
+打开「Claude 项目启动器」，先选择来源 Git 项目并给任务命名。副本位于来源项目的 `.claude-workspaces/<名称>`，有自己的 `.git` 与 `codex/claude-*` 分支，不共享主目录的 Git 元数据。仅复制已提交代码与提交历史，未提交改动、未跟踪文件及未跟踪的本地环境文件不会复制；已提交的内容仍会保留。准备工作区不需要 Claude 账号。已有同名副本只打开，不重置。
 
 本项目已经准备 `.claude-workspaces/claude`。中央私有映射登记独立 WSL 目录 `/home/pygmalion/runs/004-route-policy-hub/claude`、Mutagen 会话 `route-policy-hub-claude` 和保留端口 `43874`。新建其他工作区不会自动复用这个运行目录，使用 WSL 前必须另行登记。
 
