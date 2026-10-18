@@ -88,10 +88,10 @@ export function DirectSiteConsole() {
       <HubNav active="policies" />
       <div className="mx-auto max-w-[1000px] px-5 py-9 sm:px-7">
         <p className="text-xs tracking-widest text-primary">只管理例外</p>
-        <h1 className="mt-2 text-3xl font-semibold">国内直连清单</h1>
+        <h1 className="mt-2 text-3xl font-semibold">直连例外</h1>
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
           日常网站默认走你在 Clash
-          选择的方案。只有加入这里的网站才直连；移除后恢复默认。
+          选择的方案。这里单独管理直连网站和应用；网站移除后恢复默认。
         </p>
         <div className="my-6 rounded-2xl border border-primary/20 bg-secondary/40 p-5 text-sm leading-7">
           <strong>这份清单不影响 Claude 专用入口。</strong>

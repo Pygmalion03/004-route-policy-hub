@@ -91,7 +91,7 @@ def browser_guard():
     except (OSError,ValueError,KeyError,AssertionError,subprocess.SubprocessError):
         raise SetupError('Edge 防火墙保护未就绪或规则已改变，已停止打开浏览器。请先检查 LuLu 扩展、回环例外和 Edge 规则。')
 
-def browser(url=None):
+def browser(actual, url=None):
     browser_guard()
     edge = Path('/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge')
     if not edge.exists(): raise SetupError('未找到 Microsoft Edge。')
@@ -108,7 +108,7 @@ def browser(url=None):
     user_data = LOCAL/'Claude Edge'; user_data.mkdir(parents=True,exist_ok=True,mode=0o700)
     args=['/usr/bin/arch','-arm64',str(edge),'--user-data-dir='+str(user_data),'--no-first-run','--no-default-browser-check','--disable-quic','--disable-background-networking','--force-webrtc-ip-handling-policy=disable_non_proxied_udp','--proxy-server=http://127.0.0.1:17997','--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE localhost , EXCLUDE 127.0.0.1','--new-window',start.as_uri()]
     subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
-    print('固定出口与 LuLu 规则已核对，已请求打开 Claude 专用 Edge。')
+    print('固定出口：'+actual+'\nLuLu 扩展与 Edge 规则已核对。已请求打开专用 Edge。')
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--runtime',type=Path,default=RUNTIME)
@@ -118,8 +118,16 @@ def main():
         if not a.arguments:raise SetupError('未收到登录地址。')
         capture_auth(a.arguments[-1]);return
     expected=route(a.runtime);policy=profile();actual=verify(expected,policy)
-    if a.mode=='check':print('专用出口已核对：'+actual+'。命令行出站限制可用；浏览器防护及账号生成需分别验收。');return
-    if a.mode=='browser':browser(a.arguments[0] if a.arguments else None);return
+    if a.mode=='check':
+        browser_guard()
+        print('固定出口：'+actual+'\n命令行出站限制：已启用\nLuLu 扩展与 Edge 规则：已核对',flush=True)
+        r=subprocess.run(sandbox_command(policy,['/usr/bin/curl','-sS','--proxy','http://127.0.0.1:17997','--noproxy','','--connect-timeout','5','--max-time','15','-o','/dev/null','-w','%{http_code} %{time_starttransfer}','https://api.anthropic.com/v1/models']),capture_output=True,text=True)
+        parts=r.stdout.split()
+        if r.returncode or len(parts)!=2:raise SetupError('Anthropic HTTPS 请求失败或超时。请检查专用线路。')
+        if parts[0] not in ['200','401']:raise SetupError('Anthropic 返回 HTTP '+parts[0]+'，请核查服务访问情况。')
+        print('Anthropic HTTPS：HTTP '+parts[0]+'，首响应 '+parts[1]+' 秒\n这是本次连通性检查，不代表账号登录、生成或长期稳定性已通过。')
+        return
+    if a.mode=='browser':browser(actual,a.arguments[0] if a.arguments else None);return
     cli=Path.home()/'.local/bin/claude'
     if not cli.exists():raise SetupError('尚未安装 Claude Code，请先使用官方安装方式。')
     print('固定出口已核对，正在以网络限制启动 Claude Code。',flush=True)

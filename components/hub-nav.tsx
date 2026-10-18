@@ -13,7 +13,7 @@ export function HubNav({ active }: { active: 'overview' | 'connections' | 'polic
           {([
             ['overview', '/', 'Claude 专用'],
             ['connections', '/connections', '日常网络'],
-            ['policies', '/policies', '国内直连'],
+            ['policies', '/policies', '直连例外'],
           ] as const).map(([key, href, label]) => <Link key={key} href={href} aria-current={active === key ? 'page' : undefined} className={`flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-center transition-colors ${active === key ? 'bg-card font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{label}</Link>)}
         </nav>
       </div>

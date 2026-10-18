@@ -28,6 +28,7 @@ import type { Endpoint } from '@/lib/connections';
 type View = {
   configured: boolean;
   updatedAt: string;
+  claude?: { sourceChanged: boolean; expectedIp: string } | null;
   webshareMethod?: 'direct' | 'backbone';
   webshare: {
     direct: Endpoint & { hasPassword?: boolean };
@@ -54,6 +55,7 @@ type View = {
 const time = (value?: string) =>
   value
     ? new Date(value).toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
         month: 'numeric',
         day: 'numeric',
         hour: '2-digit',
@@ -227,7 +229,7 @@ export function ConnectionConsole({
       setMessage(
         next.removedNodeCount > 0
           ? `已保存并发布，${next.removedNodeCount} 个原节点已移除或改名。刷新 Clash 后请重新检查节点选择；无需重新导入订阅。`
-          : '已保存并发布。现在到 Clash 刷新「日常 · 域名管理 · Webshare」，继续使用原方案；无需重新导入订阅。',
+          : '已保存并发布。现在到 Clash 刷新「日常网络 · 网站管理」，继续使用原方案；无需重新导入订阅。',
       );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : '发布失败，原配置继续保留');
@@ -450,7 +452,17 @@ export function ConnectionConsole({
         ) : (
           data?.configured && (
             <>
-              <section className="mb-6 rounded-2xl border bg-card p-5"><h2 className="font-semibold">日常的四种使用方案</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">在 Clash 选择「使用方案」；需要机场时，再选「机场节点」。这里的选择不影响 Claude 专用入口。</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{plans.map(plan => <div key={plan.name} className="rounded-xl bg-muted/50 p-4"><h3 className="text-sm font-medium">{plan.name}</h3><p className="mt-2 text-xs text-muted-foreground">{plan.path} · 出口：{plan.exit}</p></div>)}</div></section>
+              <details className="mb-6 rounded-2xl border bg-card p-5"><summary className="cursor-pointer font-semibold">切换方法与四种使用方案</summary><h2 className="sr-only">日常的四种使用方案</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">在 Clash 选择「使用方案」；需要机场时，再选「机场节点」。这里的选择不影响 Claude 专用入口。</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{plans.map(plan => <div key={plan.name} className="rounded-xl bg-muted/50 p-4"><h3 className="text-sm font-medium">{plan.name}</h3><p className="mt-2 text-xs text-muted-foreground">{plan.path} · 出口：{plan.exit}</p></div>)}</div></details>
+              {airports.some(a => a.refreshError) && <section aria-label="配置提醒" className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
+                <h2 className="font-semibold">机场订阅需要检查</h2>
+                {airports.filter(a => a.refreshError).map(a => <p key={a.id} className="mt-2 text-sm leading-7">{a.name}：最近更新失败，当前继续使用缓存的 {a.nodeCount ?? 0} 个节点。请到官网核对订阅，再在下方更换。</p>)}
+                <Button variant="outline" className="mt-3" onClick={() => setEditing('airport')}>查看机场配置</Button>
+              </section>}
+              {data.claude?.sourceChanged && <section aria-label="配置提醒" className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
+                <h2 className="font-semibold">Claude 仍使用原固定配置</h2>
+                <p className="mt-2 text-sm leading-7">日常连接参数已变更，Claude 的独立副本未同步。原固定出口为 {data.claude.expectedIp}；确认新路线后，再单独更新。</p>
+                <div className="mt-3"><NextLink href="/">检查并更新 Claude 固定配置</NextLink></div>
+              </section>}
               <section
                 className="mb-7 rounded-2xl border bg-card p-5 sm:p-6"
                 aria-label="更新进度"
@@ -463,13 +475,13 @@ export function ConnectionConsole({
                     <p className="mt-2 text-xs leading-6 text-muted-foreground">
                       {dirty
                         ? '保存成功前，已有订阅不受影响'
-                        : `版本时间 ${time(data.updatedAt)}`}
+                        : `发布时间 ${time(data.updatedAt)}（北京时间）`}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">② Clash 刷新订阅</p>
                     <p className="mt-2 text-xs leading-6 text-muted-foreground">
-                      订阅页 → 日常 · 域名管理 · Webshare → 刷新
+                      订阅页 → 日常网络 · 网站管理 → 刷新
                     </p>
                   </div>
                   <div>
@@ -739,7 +751,7 @@ export function ConnectionConsole({
                             className={`text-xs ${a.refreshError ? 'text-amber-700' : 'text-muted-foreground'}`}
                           >
                             {a.refreshError
-                              ? '上次订阅更新失败，现有节点保留'
+                              ? `上次更新失败 · 缓存 ${a.nodeCount ?? 0} 个节点`
                               : `${a.nodeCount ?? 0} 个节点 · ${time(a.refreshedAt)}`}
                           </p>
                           <Button
@@ -881,10 +893,10 @@ export function ConnectionConsole({
                   <h2 className="font-medium">只换地区？不用改网站</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Clash →
-                    机场节点，直接选择机场和地区。国内直连网站在分流规则添加。
+                    机场节点，直接选择机场和地区。需要直连的网站或应用在「直连例外」管理。
                   </p>
                 </div>
-                <NextLink href="/policies">管理分流规则</NextLink>
+                <NextLink href="/policies">管理直连例外</NextLink>
               </section>
               <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card/95 px-4 py-4 shadow-lg backdrop-blur">
                 <div>

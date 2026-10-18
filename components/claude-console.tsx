@@ -15,6 +15,8 @@ type View = {
   updatedAt: string;
   claude: {
     mode: 'vps' | 'webshare';
+    vpsId?: string;
+    sourceChanged: boolean;
     expectedIp: string;
     frontName: string;
     pinnedAt: string;
@@ -47,7 +49,7 @@ export function ClaudeConsole() {
       sessionStorage.setItem('route-list-password', auth);
       setPassword('');
       setData(result);
-      setVpsId(result.vpsNodes?.[0]?.id || '');
+      setVpsId(result.claude?.vpsId || result.vpsNodes?.[0]?.id || '');
       setMode(result.claude?.mode || 'vps');
       setExpectedIp(
         result.claude?.expectedIp || result.webshare?.direct?.server || '',
@@ -71,7 +73,7 @@ export function ClaudeConsole() {
         if (!r.ok) throw new Error(result.error);
         if (active) {
           setData(result);
-          setVpsId(result.vpsNodes?.[0]?.id || '');
+          setVpsId(result.claude?.vpsId || result.vpsNodes?.[0]?.id || '');
           setMode(result.claude?.mode || 'vps');
           setExpectedIp(
             result.claude?.expectedIp || result.webshare?.direct?.server || '',
@@ -129,7 +131,7 @@ export function ClaudeConsole() {
         <h1 className="mt-2 text-3xl font-semibold">Claude 专用网络</h1>
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
           固定出口单独保存。日常切换机场、VPS
-          或修改国内直连清单，不改变这里的出口。
+          或修改直连例外，不改变这里的出口。
         </p>
         {!data ? (
           <section className="my-6 rounded-2xl border bg-card p-5">
@@ -183,11 +185,13 @@ export function ClaudeConsole() {
                   : '选择一台已部署 VPS，设置独立固定出口。'}
               </p>
               <p className="mt-4 text-xs leading-6 opacity-80">
-                专用端口 17997 · 不自动切换其他出口 · 不使用国内直连清单
+                专用端口 17997 · 不自动切换其他出口 · 不使用直连例外
               </p>
             </section>
             <section className="mb-6 rounded-2xl border bg-card p-5">
-              <h2 className="font-semibold">使用 Claude Code 专用启动器</h2>
+              <h2 className="font-semibold">平时从这里启动</h2>
+              <p className="mt-3 text-sm leading-7"><strong>浏览器：</strong>在 Mac 启动台或聚焦搜索打开「Claude 专用 Edge」。<br /><strong>命令行：</strong>复制下方 Claude Code 命令，在 Terminal 运行。</p>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">保持 Clash 和 LuLu 运行。无需先切日常方案；切换整份订阅或重启 Clash 仍可能中断连接。</p>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
                 启动器先核对实际出口
                 IP，再限制 Claude Code 及其子进程只能连接专用代理。专用端口不可用或 IP
@@ -205,9 +209,9 @@ export function ClaudeConsole() {
                   <Copy className="size-4" />
                   复制 Claude Code 启动命令
                 </Button>
-                <Button variant="outline" onClick={() => void copy('~/Documents/Codex/Projects/004-route-policy-hub/scripts/claude-browser.command')}>
+                <Button variant="outline" onClick={() => void copy('~/Documents/Codex/Projects/004-route-policy-hub/scripts/claude-check.command')}>
                   <Copy className="size-4" />
-                  复制专用 Edge 启动命令
+                  复制网络检查命令
                 </Button>
               </div>
             </section>
@@ -216,7 +220,7 @@ export function ClaudeConsole() {
                 <h2 className="text-sm font-medium">网站配置</h2>
                 <p className="mt-2 text-xs leading-6 text-muted-foreground">
                   {data.claude
-                    ? '已发布，等待客户端刷新确认'
+                    ? `配置已保存 · ${new Date(data.claude.pinnedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}（北京时间）。本机是否已应用，请用启动器检查。`
                     : '尚未发布专用配置'}
                 </p>
               </div>
@@ -233,6 +237,11 @@ export function ClaudeConsole() {
                 </p>
               </div>
             </section>
+            {data.claude?.sourceChanged && <section aria-label="配置提醒" className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
+              <h2 className="font-semibold">日常连接已变更，Claude 尚未同步</h2>
+              <p className="mt-2 text-sm leading-7">Claude 继续使用原固定配置。请核对下方 VPS、路线和出口 IP，再保存发布；发布后刷新 Clash 主订阅并检查网络。</p>
+              <Button className="mt-3" variant="outline" onClick={() => setEditing(true)}>核对并更新固定配置</Button>
+            </section>}
             <section className="mb-6 rounded-2xl border bg-card p-5">
               <h2 className="font-semibold">仅在确实要更换固定出口时更新</h2>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
@@ -312,7 +321,7 @@ export function ClaudeConsole() {
         )}
         <div className="flex flex-wrap gap-5">
           <NextLink href="/connections">管理日常网络</NextLink>
-          <NextLink href="/policies">添加国内直连网站</NextLink>
+          <NextLink href="/policies">管理直连例外</NextLink>
         </div>
       </div>
     </main>

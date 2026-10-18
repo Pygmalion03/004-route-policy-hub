@@ -2,6 +2,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { isIP } from 'node:net';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { parse } from 'yaml';
 import { readPolicyStore } from './policies';
 import { parseVpsLink, type VpsNode } from './vps';
@@ -15,7 +16,7 @@ export type ConnectionStore = {
   airports: Airport[];
   vpsNodes?: VpsNode[];
   webshareMethod?: 'direct' | 'backbone';
-  claude?: { mode?: 'vps' | 'webshare'; expectedIp: string; pinnedAt: string; frontName: string; endpoint?: Endpoint; front: Node };
+  claude?: { mode?: 'vps' | 'webshare'; vpsId?: string; expectedIp: string; pinnedAt: string; frontName: string; endpoint?: Endpoint; front: Node };
   defaults: Record<string, unknown>;
 };
 const location = () => path.join(process.env.DATA_DIR || path.join(process.cwd(), 'data'), 'connections.json');
@@ -36,10 +37,16 @@ export async function readConnections(): Promise<ConnectionStore | null> {
 }
 export function publicConnections(store: ConnectionStore | null) {
   if (!store) return { configured: false };
+  const pinned = store.claude;
+  const source = pinned && store.vpsNodes?.find(v => pinned.vpsId ? v.id === pinned.vpsId : v.name === pinned.frontName);
+  const withoutName = (node: Node) => { const { name: _name, ...connection } = node; return connection; };
+  const sourceChanged = Boolean(pinned && (!source ||
+    !isDeepStrictEqual(withoutName(source.node), withoutName(pinned.front)) ||
+    (pinned.mode !== 'vps' && !isDeepStrictEqual(store.webshare[store.webshareMethod || 'direct'], pinned.endpoint))));
   return {
     configured: true, updatedAt: store.updatedAt,
     webshareMethod: store.webshareMethod || 'direct',
-    claude: store.claude ? { mode: store.claude.mode || 'webshare', expectedIp: store.claude.expectedIp, pinnedAt: store.claude.pinnedAt, frontName: store.claude.frontName, port: 17997 } : null,
+    claude: pinned ? { mode: pinned.mode || 'webshare', vpsId: source?.id, expectedIp: pinned.expectedIp, pinnedAt: pinned.pinnedAt, frontName: pinned.frontName, sourceChanged, port: 17997 } : null,
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
     airports: store.airports.map(({ id, name, nodes, refreshedAt, refreshError }) => ({ id, name, nodeCount: nodes.length, url: '', hasUrl: true, refreshedAt, refreshError })),
     vpsNodes: (store.vpsNodes || []).map(({ id, name, node }) => ({ id, name, server: node.server, port: node.port, type: node.type, hasConfig: true, shareUrl: '' })),
@@ -124,7 +131,7 @@ export async function saveConnections(input: unknown) {
       if (!front || !isIP(expectedIp)) throw new Error('请选择已配置的 VPS，并填写已核实的固定出口 IP');
       const mode = value.pinClaude.mode || 'webshare';
       if (!['vps', 'webshare'].includes(mode)) throw new Error('请选择 Claude 专用路线');
-      next.claude = { mode, expectedIp, pinnedAt: next.updatedAt, frontName: front.name, ...(mode === 'webshare' ? { endpoint: { ...webshare[webshareMethod] } } : {}), front: { ...front.node } };
+      next.claude = { mode, vpsId: front.id, expectedIp, pinnedAt: next.updatedAt, frontName: front.name, ...(mode === 'webshare' ? { endpoint: { ...webshare[webshareMethod] } } : {}), front: { ...front.node } };
     }
     await writeConnections(next);
     return next;
