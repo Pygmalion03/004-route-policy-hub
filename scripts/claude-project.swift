@@ -61,17 +61,22 @@ final class ProjectLauncher: NSObject, NSApplicationDelegate {
             let result = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
             let message = String(data: result, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "准备失败"
-            status.stringValue = process.terminationStatus == 0 ? "已准备：\(message)。这是独立仓库和分支；未提交改动与秘密不复制。注册后点下方启动。" : message
+            if process.terminationStatus == 0 { UserDefaults.standard.set(message, forKey: "lastWorkspace") }
+            status.stringValue = process.terminationStatus == 0 ? "已准备：\(message)。这是独立仓库和分支；未提交改动与未跟踪文件不复制。注册后点下方启动。" : message
         } catch { status.stringValue = "无法准备工作区，请确认来源项目已有 Git 提交。" }
     }
 
     @objc func startProject() {
         let panel = NSOpenPanel()
-        panel.title = "选择 Claude 独立工作区（.claude-workspaces/claude）"
+        panel.title = "选择 Claude 独立工作区（.claude-workspaces/任务名称）"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/Codex/Projects")
+        let data = try? Data(contentsOf: Bundle.main.resourceURL!.appendingPathComponent("launcher.json"))
+        let config = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: String] }
+        let initial = UserDefaults.standard.string(forKey: "lastWorkspace") ?? config?["defaultWorkspace"] ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/Codex/Projects").path
+        panel.directoryURL = URL(fileURLWithPath: initial)
+        panel.showsHiddenFiles = true
         guard panel.runModal() == .OK, let project = panel.url?.resolvingSymlinksInPath() else { return }
         let home = FileManager.default.homeDirectoryForCurrentUser
         guard project != home && project.path != "/" else {
@@ -79,7 +84,7 @@ final class ProjectLauncher: NSObject, NSApplicationDelegate {
             return
         }
         guard project.pathComponents.contains(".claude-workspaces"), FileManager.default.fileExists(atPath: project.appendingPathComponent(".git").path) else {
-            status.stringValue = "请先准备独立工作区，再选择来源项目下的 .claude-workspaces/claude 文件夹；按 ⌘⇧. 可显示隐藏目录。"
+            status.stringValue = "请先准备独立工作区，再选择来源项目下 .claude-workspaces 中的任务文件夹。"
             return
         }
         do {

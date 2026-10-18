@@ -11,7 +11,7 @@ contents = app/'Contents'
 for name in ['MacOS', 'Resources']:
     (contents/name).mkdir(parents=True, exist_ok=True)
 config = contents/'Resources/launcher.json'
-config.write_text(json.dumps({'script': str(root/'claude-safe.command'), 'workspace': str(root/'claude-workspace.py')}, ensure_ascii=False))
+config.write_text(json.dumps({'script': str(root/'claude-safe.command'), 'workspace': str(root/'claude-workspace.py'), 'defaultWorkspace': str(root.parent/'.claude-workspaces/claude')}, ensure_ascii=False))
 config.chmod(0o600)
 with (contents/'Info.plist').open('wb') as f:
     plistlib.dump({'CFBundleIdentifier': 'top.pygmalion.claude-project', 'CFBundleName': 'Claude 项目启动器', 'CFBundleExecutable': 'ClaudeProject', 'CFBundlePackageType': 'APPL', 'CFBundleVersion': '1', 'NSHighResolutionCapable': True}, f)
