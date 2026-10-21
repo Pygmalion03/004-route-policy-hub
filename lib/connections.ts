@@ -166,7 +166,7 @@ export async function refreshConnections() {
   pending = operation;
   return operation;
 }
-export async function generateConfiguration(store: ConnectionStore, origin: string) {
+export async function generateConfiguration(store: ConnectionStore, origin: string, client: 'desktop' | 'ios' = 'desktop') {
   const proxies: Record<string, unknown>[] = [];
   const endpoint = store.webshare[store.webshareMethod || 'direct'];
   if (store.airports.length) proxies.push({ ...endpoint, name: 'Webshare · 机场通道', 'dialer-proxy': '机场节点' });
@@ -207,7 +207,7 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
   const ruleProviders = Object.fromEntries(['direct', 'proxy'].map((action) => [
     `hub-${action}`, { type: 'http', behavior: 'classical', format: 'yaml', url: `${origin}/rules/${action}.yaml`, path: `./rule_providers/hub-${action}.yaml`, interval: 300, proxy: 'DIRECT', payload: policy.policies.filter(p => p.enabled && p.action === action.toUpperCase()).flatMap(p => p.matchers.map(m => `${m.type},${m.value}${m.noResolve ? ',no-resolve' : ''}`)) },
   ]));
-  return {
+  const config = {
     ...JSON.parse(JSON.stringify(store.defaults).replaceAll('#固定出口', '#使用方案').replaceAll('#出口模式', '#使用方案')), 'mixed-port': 7897, 'allow-lan': false, mode: 'rule', 'log-level': 'warning', ipv6: false,
     profile: { 'store-selected': true },
     proxies, 'proxy-providers': providers, 'proxy-groups': groups,
@@ -222,4 +222,28 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     },
     rules: [...privateRules, 'RULE-SET,hub-direct,DIRECT', 'RULE-SET,hub-proxy,使用方案', 'RULE-SET,china-domains,DIRECT', 'RULE-SET,china-ips,DIRECT', 'MATCH,使用方案'],
   };
+  if (client === 'desktop') return config;
+  if (!claudeName) throw new Error('请先设置 Claude 固定出口，再导入手机订阅');
+  // iOS uses domain routing instead of the Mac's dedicated local listeners.
+  for (const key of ['listeners', 'external-controller', 'external-controller-tls', 'external-controller-unix', 'external-ui', 'external-ui-url', 'secret', 'port', 'socks-port', 'redir-port', 'tproxy-port']) delete config[key];
+  config.tun = { enable: true, stack: 'mixed', 'auto-route': true, 'strict-route': true, 'dns-hijack': ['any:53', 'tcp://any:53'] };
+  const resolver = `https://1.1.1.1/dns-query#${claudeName}`;
+  config.dns = {
+    enable: true, ipv6: false, 'enhanced-mode': 'fake-ip', 'fake-ip-range': '198.18.0.1/16',
+    'default-nameserver': ['1.1.1.1', '1.0.0.1'],
+    'proxy-server-nameserver': [resolver], nameserver: [resolver],
+    'fake-ip-filter': ['*.lan', '*.local', 'localhost'],
+  };
+  const domains = ['claude.ai', 'claude.com', 'anthropic.com', 'claudeusercontent.com', 'claudeusercontent.net', 'claudemcpclient.com'];
+  config.rules.unshift(...domains.map(domain => `DOMAIN-SUFFIX,${domain},${claudeName}`), `DOMAIN,ipv4.webshare.io,${claudeName}`);
+  // Match the verified phone's initial daily plan; stored client selections persist.
+  const plan = groups.find(group => group.name === '使用方案');
+  if (plan?.proxies?.includes('只用 VPS')) plan.proxies = ['只用 VPS', ...plan.proxies.filter(name => name !== '只用 VPS')];
+  const vps = groups.find(group => group.name === 'VPS 节点');
+  const hysteria = vpsNodes.find(node => node.node.type === 'hysteria2');
+  if (vps?.proxies && hysteria) {
+    const name = `自建 VPS｜${hysteria.name}`;
+    vps.proxies = [name, ...vps.proxies.filter(value => value !== name)];
+  }
+  return config;
 }

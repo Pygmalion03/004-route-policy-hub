@@ -228,11 +228,11 @@ export function ConnectionConsole({
       setBusy(false);
     }
   }
-  async function copySubscription() {
+  async function copySubscription(ios = false) {
     setBusy(true);
     setMessage('');
     try {
-      const r = await fetch('/api/connections', {
+      const r = await fetch(`/api/connections${ios ? '?client=ios' : ''}`, {
         method: 'POST',
         headers: { 'x-admin-password': authorization() },
       });
@@ -240,7 +240,7 @@ export function ConnectionConsole({
       if (!r.ok) throw new Error(result.error);
       await navigator.clipboard.writeText(result.url);
       setMessage(
-        '已复制。仅首次接入新设备需要导入；更换参数后刷新已有订阅即可。地址包含私人令牌，请勿分享。',
+        ios ? '手机订阅已复制。在 Clash Mi 从剪贴板导入，选择「内置-不覆写」、规则模式并开启自动更新。Claude 域名固定出口，其余沿用日常分流。地址含私人令牌，请勿分享。' : '已复制。仅首次接入新设备需要导入；更换参数后刷新已有订阅即可。地址包含私人令牌，请勿分享。',
       );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : '复制失败');
@@ -282,14 +282,19 @@ export function ConnectionConsole({
             </p>
           </div>
           {data?.configured && (
+            <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => void copySubscription()}
               disabled={busy || dirty}
             >
               <Copy className="size-4" />
-              首次接入：复制订阅
+              复制电脑订阅
             </Button>
+            <Button variant="outline" onClick={() => void copySubscription(true)} disabled={busy || dirty || !data.claude}>
+              <Copy className="size-4" />复制 iPhone 订阅
+            </Button>
+            </div>
           )}
         </header>
         {!data ? (

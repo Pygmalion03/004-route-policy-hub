@@ -108,7 +108,7 @@ export function ClaudeConsole() {
       setData(result);
       setEditing(false);
       setMessage(
-        'Claude 专用配置已发布。请刷新 Clash 的日常订阅，再通过本机安全启动器检查并启动。网站没有验证本机保护状态。',
+        'Claude 专用配置已发布。请刷新 Mac 和 iPhone 各自的订阅。Mac 通过安全启动器检查并启动；网站不能确认设备是否已应用。',
       );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : '发布失败');
@@ -141,9 +141,9 @@ export function ClaudeConsole() {
             <p className="mt-2 text-xs leading-6 text-muted-foreground">当前 Mac 通过本地订阅脚本应用；网站保存配置不等于本机已应用或实测。</p>
           </div>
           <div className="rounded-2xl border bg-card p-5">
-            <h2 className="font-semibold">家庭设备策略 · NAS 网关待实施</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">除 Mac 外的 Windows 主机、手机和其他家庭设备，计划由 NAS 统一按访问目标分流：国内直连、国外代理。</p>
-            <p className="mt-2 text-xs leading-6 text-muted-foreground">当前网站只管理与分发配置，尚未接管这些设备流量。网关不能直接识别设备上的程序名。</p>
+            <h2 className="font-semibold">iPhone · Clash Mi</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">在连接管理页复制 iPhone 订阅，导入 Clash Mi，选择「内置-不覆写」和规则模式，开启连接与自动更新。Claude 域名和 DNS 走这里的固定出口，其他网站沿用日常分流。</p>
+            <p className="mt-2 text-xs leading-6 text-muted-foreground">网站保存参数后，手机刷新已有订阅即可。Windows 和其他家庭设备的 NAS 网关仍未实施。</p>
           </div>
         </section>
         {!data ? (
@@ -198,13 +198,13 @@ export function ClaudeConsole() {
                   : '选择一台已部署 VPS，设置独立固定出口。'}
               </p>
               <p className="mt-4 text-xs leading-6 opacity-80">
-                专用端口 17997 · 不自动切换其他出口 · 不使用网站例外
+                Mac 专用端口 17997；iPhone 按 Claude 域名分流 · 固定线路不自动切换其他出口
               </p>
             </section>
             <section className="mb-6 rounded-2xl border bg-card p-5">
               <h2 className="font-semibold">平时从这里启动</h2>
-              <p className="mt-3 text-sm leading-7"><strong>Claude Code：</strong>打开「Claude 项目启动器」，先准备独立工作区，再启动。工作区内自动编辑，越界时弹窗申请，批准后恢复会话。<br /><strong>浏览器：</strong>打开「Claude 专用 Edge」。</p>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">无需注册即可准备工作区；Claude 账号尚未验收，登录和真实生成需要本人完成。独立副本从已提交代码创建，未提交改动和未跟踪文件不会复制。</p>
+              <p className="mt-3 text-sm leading-7"><strong>Claude Code：</strong>打开「Claude 项目启动器」，进入固定的 009-claude-workspace 工作区。可在其中放置多个项目；导入项目后再启动。<br /><strong>浏览器：</strong>打开「Claude 专用 Edge」。</p>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">工作区外的项目不会自动交给 Claude。使用 Git 导入时只复制已提交代码，未提交改动和未跟踪文件不会复制。手机 Claude App 的登录、订阅及真实生成需在手机上完成。</p>
               <p className="mt-2 text-sm leading-7 text-muted-foreground">保持 Clash 和 LuLu 运行。无需先切日常方案；切换整份订阅或重启 Clash 仍可能中断连接。</p>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
                 启动器先核对实际出口

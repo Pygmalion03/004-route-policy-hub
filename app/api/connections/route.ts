@@ -27,5 +27,7 @@ export async function POST(request: Request) {
   const store = await readConnections();
   if (!store) return Response.json({ error: '尚未配置' }, { status: 409, headers });
   const origin = process.env.PUBLIC_BASE_URL || new URL(request.url).origin;
-  return Response.json({ url: `${origin}/subscription?token=${store.token}` }, { headers });
+  const ios = new URL(request.url).searchParams.get('client') === 'ios';
+  if (ios && !store.claude) return Response.json({ error: '请先设置 Claude 固定出口' }, { status: 409, headers });
+  return Response.json({ url: `${origin}/subscription?token=${store.token}${ios ? '&client=ios' : ''}` }, { headers });
 }
