@@ -12,5 +12,11 @@ function main(config) {
   config.rules = [...directProcesses, ...(config.rules || []).filter(rule =>
     !/^RULE-SET,china-(domains|ips),/.test(rule) && !directProcesses.includes(rule)
   )];
+  const dnsPolicy = config.dns?.['nameserver-policy'];
+  if (dnsPolicy) {
+    delete dnsPolicy['rule-set:hub-direct'];
+    delete dnsPolicy['rule-set:hub-proxy'];
+    delete dnsPolicy['rule-set:china-domains'];
+  }
   return config;
 }

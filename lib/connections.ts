@@ -222,6 +222,13 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     },
     rules: [...privateRules, 'RULE-SET,hub-direct,DIRECT', 'RULE-SET,hub-proxy,使用方案', 'RULE-SET,china-domains,DIRECT', 'RULE-SET,china-ips,DIRECT', 'MATCH,使用方案'],
   };
+  const domesticResolvers = ['https://doh.pub/dns-query#DIRECT', 'https://dns.alidns.com/dns-query#DIRECT'];
+  config.dns['nameserver-policy'] = {
+    ...config.dns['nameserver-policy'],
+    'rule-set:hub-direct': domesticResolvers,
+    'rule-set:hub-proxy': config.dns.nameserver,
+    'rule-set:china-domains': domesticResolvers,
+  };
   if (client === 'desktop') return config;
   if (!claudeName) throw new Error('请先设置 Claude 固定出口，再导入手机订阅');
   // iOS uses domain routing instead of the Mac's dedicated local listeners.
