@@ -505,7 +505,7 @@ export function ConnectionConsole({
                     [
                       'airport',
                       '更换机场',
-                      airports.map((a) => `${a.name}${a.enabled === false ? '（已停用）' : ''}`).join(' / ') || '尚未添加',
+                      activeAirports.map((a) => a.name).join(' / ') || '没有启用的机场',
                       '粘贴订阅，成功读取后替换',
                     ],
                     [
@@ -692,7 +692,10 @@ export function ConnectionConsole({
                   </p>
                   <fieldset disabled={busy} className="space-y-4">
                     {airports.map((a, index) => (
-                      <div key={a.id} className="rounded-xl border p-4">
+                      <details key={a.id} open={a.enabled !== false} className="rounded-xl border p-4">
+                        <summary className="mb-4 cursor-pointer text-sm font-semibold">
+                          {a.enabled === false ? '已停用的订阅' : a.name || '新机场'}
+                        </summary>
                         <div className="grid gap-4 sm:grid-cols-2">
                           <label
                             htmlFor={`airport-name-${a.id}`}
@@ -780,7 +783,7 @@ export function ConnectionConsole({
                             移除
                           </Button>
                         </div>
-                      </div>
+                      </details>
                     ))}
                   </fieldset>
                 </section>

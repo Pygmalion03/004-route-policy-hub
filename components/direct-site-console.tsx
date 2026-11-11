@@ -88,17 +88,15 @@ export function DirectSiteConsole() {
     <main className="min-h-screen bg-background text-foreground">
       <HubNav active="policies" />
       <div className="mx-auto max-w-[1000px] px-5 py-9 sm:px-7">
-        <p className="text-xs tracking-widest text-primary">只管理例外</p>
-        <h1 className="mt-2 text-3xl font-semibold">网站例外</h1>
+        <p className="text-xs tracking-widest text-primary">三台设备共用</p>
+        <h1 className="mt-2 text-3xl font-semibold">管理网站连接方式</h1>
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          Mac 和 iPhone 除直连例外外默认走代理；电脑通用订阅国内直连、国外代理。这里管理共用的网站例外；移除后恢复各客户端的默认策略。
+          在这里添加一次，Mac、iPhone 和 Windows 都会使用。默认选择直连，也可以指定走代理。
         </p>
         <div className="my-6 rounded-2xl border border-primary/20 bg-secondary/40 p-5 text-sm leading-7">
-          <strong>这份清单不影响 Claude 专用入口。</strong>
+          <strong>修改后通常几分钟生效。</strong>
           <p>
-            Claude
-            专用网络独立使用固定出口，不会因为这里添加了网站而直连。局域网与
-            Tailscale 的基础直连规则单独保留。
+            清单包含你手动添加的网站。删除后，网站按各设备的默认规则连接。Claude 的专用线路单独管理。
           </p>
         </div>
         {!unlocked ? (
@@ -125,7 +123,7 @@ export function DirectSiteConsole() {
         ) : (
           <section className="mb-6 rounded-2xl border bg-card p-5">
             <label htmlFor="direct-domain" className="text-sm font-medium">
-              添加需要特别处理的网站
+              输入网站地址
             </label>
             <div className="mt-3 flex flex-wrap gap-3">
               <Input
@@ -152,11 +150,13 @@ export function DirectSiteConsole() {
               </Button>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              例外优先于客户端默认策略。保存即发布，Clash 约五分钟更新；不影响 Claude 专用入口。
+              例如输入 bilibili.com，也包含 api.bilibili.com 等子域名。保存后 Clash 通常约五分钟更新。
             </p>
           </section>
         )}
-        <section className="mb-6 rounded-2xl border bg-card p-5">
+        <details className="mb-6 rounded-2xl border bg-card p-5">
+          <summary className="cursor-pointer font-semibold">其他直连设置</summary>
+          <div className="mt-4">
           <h2 className="font-semibold">UU 远程</h2>
           <p className="mt-2 text-sm leading-7 text-muted-foreground">
             按应用进程直连，减少代理流量消耗。此例外不影响 Claude 专用入口。
@@ -166,7 +166,8 @@ export function DirectSiteConsole() {
             onClick={() => void update(undefined, 'uu-remote')}>
             {data?.uuDirect ? '已启用直连' : '启用 UU 远程直连'}
           </Button>
-        </section>
+          </div>
+        </details>
         {message && (
           <output
             className="mb-5 block rounded-xl border bg-card p-4 text-sm"
@@ -217,7 +218,7 @@ export function DirectSiteConsole() {
           )}
         </section>
         <p className="mt-5 text-xs leading-6 text-muted-foreground">
-          修改会自动保存到 NAS，Clash
+          修改会自动保存，Clash
           约五分钟获取规则。连接参数的更换仍需刷新订阅。
         </p>
       </div>
