@@ -57,6 +57,15 @@ test('iPhone Claude DNS and routing remain fixed', async () => {
   assert.equal(config.rules[0], 'DOMAIN-SUFFIX,claude.ai,Claude 固定出口｜192.0.2.1');
 });
 
+test('iPhone defaults to the daily proxy while preserving explicit direct exceptions', async () => {
+  const config = await generateConfiguration(store, 'https://example.test', 'ios');
+  assert.ok(config.rules.includes('RULE-SET,hub-direct,DIRECT'));
+  assert.ok(config.rules.includes('IP-CIDR,192.168.0.0/16,DIRECT,no-resolve'));
+  assert.ok(!config.rules.includes('RULE-SET,china-domains,DIRECT'));
+  assert.ok(!config.rules.includes('RULE-SET,china-ips,DIRECT'));
+  assert.equal(config.rules.at(-1), 'MATCH,使用方案');
+});
+
 test('Mac override keeps its original proxy DNS and strips automatic China routing', () => {
   const config = {
     dns: {

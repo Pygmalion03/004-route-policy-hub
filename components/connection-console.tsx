@@ -240,7 +240,7 @@ export function ConnectionConsole({
       if (!r.ok) throw new Error(result.error);
       await navigator.clipboard.writeText(result.url);
       setMessage(
-        ios ? '手机订阅已复制。在 Clash Mi 从剪贴板导入，选择「内置-不覆写」、规则模式并开启自动更新。Claude 域名固定出口，其余沿用日常分流。地址含私人令牌，请勿分享。' : '已复制。仅首次接入新设备需要导入；更换参数后刷新已有订阅即可。地址包含私人令牌，请勿分享。',
+        ios ? '手机订阅已复制。在 Clash Mi 从剪贴板导入，选择「内置-不覆写」、规则模式并开启自动更新。Claude 域名固定出口，其他网站除直连例外外默认走日常代理。地址含私人令牌，请勿分享。' : '已复制。仅首次接入新设备需要导入；更换参数后刷新已有订阅即可。地址包含私人令牌，请勿分享。',
       );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : '复制失败');

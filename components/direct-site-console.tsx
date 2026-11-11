@@ -75,7 +75,7 @@ export function DirectSiteConsole() {
         application
           ? 'UU 远程已设为直连，约五分钟更新。Claude 专用入口继续使用固定代理。'
           : id
-          ? '已移除。该网站恢复客户端默认策略，约五分钟更新；Mac 默认代理，通用订阅国内直连、国外代理。'
+          ? '已移除。该网站恢复客户端默认策略，约五分钟更新；Mac 和 iPhone 默认代理，电脑通用订阅国内直连、国外代理。'
           : `已添加。该网站及其子域名${action === 'DIRECT' ? '直连' : '走日常代理'}，约五分钟更新。`,
       );
     } catch (e) {
@@ -91,7 +91,7 @@ export function DirectSiteConsole() {
         <p className="text-xs tracking-widest text-primary">只管理例外</p>
         <h1 className="mt-2 text-3xl font-semibold">网站例外</h1>
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          Mac 除直连例外外默认走代理；通用订阅国内直连、国外代理。这里管理共用的网站例外；移除后恢复各客户端的默认策略。
+          Mac 和 iPhone 除直连例外外默认走代理；电脑通用订阅国内直连、国外代理。这里管理共用的网站例外；移除后恢复各客户端的默认策略。
         </p>
         <div className="my-6 rounded-2xl border border-primary/20 bg-secondary/40 p-5 text-sm leading-7">
           <strong>这份清单不影响 Claude 专用入口。</strong>

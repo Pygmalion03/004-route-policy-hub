@@ -142,7 +142,7 @@ export function ClaudeConsole() {
           </div>
           <div className="rounded-2xl border bg-card p-5">
             <h2 className="font-semibold">iPhone · Clash Mi</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">在连接管理页复制 iPhone 订阅，导入 Clash Mi，选择「内置-不覆写」和规则模式，开启连接与自动更新。Claude 域名和 DNS 走这里的固定出口，其他网站沿用日常分流。</p>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">在连接管理页复制 iPhone 订阅，导入 Clash Mi，选择「内置-不覆写」和规则模式，开启连接与自动更新。Claude 域名和 DNS 走这里的固定出口；其他网站除直连例外外，默认走日常代理。</p>
             <p className="mt-2 text-xs leading-6 text-muted-foreground">网站保存参数后，手机刷新已有订阅即可。Windows 和其他家庭设备的 NAS 网关仍未实施。</p>
           </div>
         </section>

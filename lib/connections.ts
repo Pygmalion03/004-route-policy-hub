@@ -232,6 +232,7 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
   if (client === 'desktop') return config;
   if (!claudeName) throw new Error('请先设置 Claude 固定出口，再导入手机订阅');
   // iOS uses domain routing instead of the Mac's dedicated local listeners.
+  config.rules = config.rules.filter((rule: string) => !/^RULE-SET,china-(domains|ips),/.test(rule));
   for (const key of ['listeners', 'external-controller', 'external-controller-tls', 'external-controller-unix', 'external-ui', 'external-ui-url', 'secret', 'port', 'socks-port', 'redir-port', 'tproxy-port']) delete config[key];
   config.tun = { enable: true, stack: 'mixed', 'auto-route': true, 'strict-route': true, 'dns-hijack': ['any:53', 'tcp://any:53'] };
   const resolver = `https://1.1.1.1/dns-query#${claudeName}`;
