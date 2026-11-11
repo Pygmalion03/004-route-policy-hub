@@ -13,7 +13,7 @@ export async function PUT(request: Request) {
     const previous = await readConnections();
     const next = await saveConnections(await request.json());
     const names = (store: typeof previous) => store ? [
-      ...store.airports.flatMap(a => a.nodes.map(n => `${a.name}｜${n.name}`)),
+      ...store.airports.filter(a => a.enabled !== false).flatMap(a => a.nodes.map(n => `${a.name}｜${n.name}`)),
       ...(store.vpsNodes || []).map(v => `自建 VPS｜${v.name}`),
     ] : [];
     const retained = new Set(names(next));

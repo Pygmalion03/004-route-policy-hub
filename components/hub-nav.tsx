@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, Network } from 'lucide-react';
 
-export function HubNav({ active }: { active: 'overview' | 'connections' | 'policies' }) {
+export function HubNav({ active }: { active: 'overview' | 'claude' | 'connections' | 'policies' }) {
   return (
     <header className="border-b border-border bg-card/80">
       <div className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-7">
@@ -11,9 +11,10 @@ export function HubNav({ active }: { active: 'overview' | 'connections' | 'polic
         </Link>
         <nav aria-label="主导航" className="flex w-full flex-wrap gap-1 rounded-xl bg-muted p-1 text-sm sm:w-auto">
           {([
-            ['overview', '/', 'Claude 专用'],
-            ['connections', '/connections', '日常网络'],
+            ['overview', '/', '设备总览'],
+            ['connections', '/connections', '线路管理'],
             ['policies', '/policies', '网站例外'],
+            ['claude', '/claude', 'Claude 设置'],
           ] as const).map(([key, href, label]) => <Link key={key} href={href} aria-current={active === key ? 'page' : undefined} className={`flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-center transition-colors ${active === key ? 'bg-card font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{label}</Link>)}
           <Link prefetch={false} href="/network-guide.html" className="whitespace-nowrap rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground">使用说明</Link>
         </nav>

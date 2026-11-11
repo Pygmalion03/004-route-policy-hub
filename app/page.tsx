@@ -1,5 +1,5 @@
-import { ClaudeConsole } from '@/components/claude-console';
+import { DeviceOverview } from '@/components/device-overview';
 
 export default function Home() {
-  return <ClaudeConsole />;
+  return <DeviceOverview />;
 }

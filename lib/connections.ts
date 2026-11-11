@@ -9,7 +9,7 @@ import { parseVpsLink, type VpsNode } from './vps';
 
 type Node = Record<string, unknown> & { name: string };
 export type Endpoint = { server: string; port: number; type: 'http' | 'socks5'; username: string; password: string };
-type Airport = { id: string; name: string; url: string; nodes: Node[]; refreshedAt?: string; refreshError?: string };
+type Airport = { id: string; name: string; url: string; nodes: Node[]; enabled?: boolean; refreshedAt?: string; refreshError?: string };
 export type ConnectionStore = {
   version: 1; updatedAt: string; token: string;
   webshare: { direct: Endpoint; backbone: Endpoint };
@@ -48,7 +48,7 @@ export function publicConnections(store: ConnectionStore | null) {
     webshareMethod: store.webshareMethod || 'direct',
     claude: pinned ? { mode: pinned.mode || 'webshare', vpsId: source?.id, expectedIp: pinned.expectedIp, pinnedAt: pinned.pinnedAt, frontName: pinned.frontName, sourceChanged, port: 17997 } : null,
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
-    airports: store.airports.map(({ id, name, nodes, refreshedAt, refreshError }) => ({ id, name, nodeCount: nodes.length, url: '', hasUrl: true, refreshedAt, refreshError })),
+    airports: store.airports.map(({ id, name, nodes, enabled, refreshedAt, refreshError }) => ({ id, name, enabled: enabled !== false, nodeCount: nodes.length, url: '', hasUrl: true, refreshedAt, refreshError })),
     vpsNodes: (store.vpsNodes || []).map(({ id, name, node }) => ({ id, name, server: node.server, port: node.port, type: node.type, hasConfig: true, shareUrl: '' })),
   };
 }
@@ -78,7 +78,7 @@ export async function saveConnections(input: unknown) {
   const operation = pending.catch(() => {}).then(async () => {
     const current = await readConnections();
     if (!current) throw new Error('请先导入本机已验证的配置');
-    const value = input as { updatedAt: string; pinClaude?: { vpsId: string; expectedIp: string; mode?: 'vps' | 'webshare' }; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
+    const value = input as { updatedAt: string; pinClaude?: { vpsId: string; expectedIp: string; mode?: 'vps' | 'webshare' }; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string; enabled?: boolean }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
     if (value.updatedAt !== current.updatedAt) throw new Error('配置已被其他页面修改，请重新读取后再保存');
     const vpsInput = value.vpsNodes ?? current.vpsNodes?.map(v => ({ id: v.id, name: v.name, shareUrl: '' })) ?? [];
     if (!Array.isArray(vpsInput) || vpsInput.length > 10) throw new Error('自建 VPS 数量不能超过 10 个');
@@ -104,11 +104,13 @@ export async function saveConnections(input: unknown) {
       if (names.has(name) || ['固定出口', '前置机场', '前置线路', '出口模式', 'VPS 直出', '机场直出', '自建 VPS', '订阅更新通道'].includes(name) || /[,|]/.test(name)) throw new Error('机场名称重复或包含保留字符');
       names.add(name);
       const previous = current.airports.find((airport) => airport.id === id);
+      if (item.enabled !== undefined && typeof item.enabled !== 'boolean') throw new Error('机场启用状态无效');
       const url = item.url?.trim() || previous?.url;
       if (!url || !['http:', 'https:'].includes(new URL(url).protocol)) throw new Error('请填写 HTTP(S) 机场订阅地址');
       const nodes = previous?.url === url ? previous.nodes : await downloadAirport(url);
-      airports.push({ id, name, url, nodes, refreshedAt: previous?.url === url ? previous.refreshedAt : new Date().toISOString(), refreshError: previous?.url === url ? previous.refreshError : undefined });
+      airports.push({ id, name, url, nodes, enabled: item.enabled ?? previous?.enabled ?? true, refreshedAt: previous?.url === url ? previous.refreshedAt : new Date().toISOString(), refreshError: previous?.url === url ? previous.refreshError : undefined });
     }
+    if (!vpsNodes.length && !airports.some(airport => airport.enabled !== false)) throw new Error('请至少启用一个机场或保留一个自建 VPS');
     const webshare = {} as ConnectionStore['webshare'];
     for (const key of ['direct', 'backbone'] as const) {
       const endpoint = value.webshare?.[key];
@@ -153,6 +155,7 @@ export async function refreshConnections() {
     if (!current) return null;
     let changed = false;
     const airports = await Promise.all(current.airports.map(async airport => {
+      if (airport.enabled === false) return airport;
       if (airport.refreshedAt && Date.now() - Date.parse(airport.refreshedAt) < 3600000) return airport;
       changed = true;
       try { return { ...airport, nodes: await downloadAirport(airport.url, 8000), refreshedAt: new Date().toISOString(), refreshError: undefined }; }
@@ -169,7 +172,8 @@ export async function refreshConnections() {
 export async function generateConfiguration(store: ConnectionStore, origin: string, client: 'desktop' | 'ios' = 'desktop') {
   const proxies: Record<string, unknown>[] = [];
   const endpoint = store.webshare[store.webshareMethod || 'direct'];
-  if (store.airports.length) proxies.push({ ...endpoint, name: 'Webshare · 机场通道', 'dialer-proxy': '机场节点' });
+  const airports = store.airports.filter(airport => airport.enabled !== false);
+  if (airports.length) proxies.push({ ...endpoint, name: 'Webshare · 机场通道', 'dialer-proxy': '机场节点' });
   const vpsNodes = store.vpsNodes || [];
   if (vpsNodes.length) proxies.push({ ...endpoint, name: 'Webshare · VPS 通道', 'dialer-proxy': 'VPS 节点' });
   proxies.push(...vpsNodes.map(v => ({ ...v.node, name: `自建 VPS｜${v.name}` })));
@@ -179,20 +183,20 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     { ...store.claude.front, name: 'Claude 专用前置' },
     { ...store.claude.endpoint, name: claudeName!, 'dialer-proxy': 'Claude 专用前置' },
   );
-  const providers = Object.fromEntries(store.airports.map((airport) => [airport.id, {
+  const providers = Object.fromEntries(airports.map((airport) => [airport.id, {
     type: 'inline', payload: airport.nodes,
     override: { 'additional-prefix': `${airport.name}｜` },
     'exclude-filter': '剩余流量|套餐到期|官网|TG群|有超时',
     'health-check': { enable: false, url: 'https://www.gstatic.com/generate_204', interval: 600, lazy: true },
   }]));
   const plans = [
-    ...(store.airports.length ? [{ name: '机场＋Webshare', proxy: 'Webshare · 机场通道' }] : []),
+    ...(airports.length ? [{ name: '机场＋Webshare', proxy: 'Webshare · 机场通道' }] : []),
     ...(vpsNodes.length ? [{ name: 'VPS＋Webshare', proxy: 'Webshare · VPS 通道' }, { name: '只用 VPS', proxy: 'VPS 节点' }] : []),
-    ...(store.airports.length ? [{ name: '只用机场', proxy: '机场节点' }] : []),
+    ...(airports.length ? [{ name: '只用机场', proxy: '机场节点' }] : []),
   ];
   const groups = [
     { name: '使用方案', type: 'select', proxies: plans.map(p => p.name) },
-    ...(store.airports.length ? [{ name: '机场节点', type: 'select', use: store.airports.map(a => a.id), 'empty-fallback': 'REJECT' }] : []),
+    ...(airports.length ? [{ name: '机场节点', type: 'select', use: airports.map(a => a.id), 'empty-fallback': 'REJECT' }] : []),
     ...(vpsNodes.length ? [{ name: 'VPS 节点', type: 'select', hidden: vpsNodes.length === 1, proxies: vpsNodes.map(v => `自建 VPS｜${v.name}`) }] : []),
     ...plans.map(p => ({ name: p.name, type: 'select', hidden: true, proxies: [p.proxy] })),
   ];

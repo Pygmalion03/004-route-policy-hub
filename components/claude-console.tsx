@@ -126,7 +126,7 @@ export function ClaudeConsole() {
   }
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <HubNav active="overview" />
+      <HubNav active="claude" />
       <div className="mx-auto max-w-[1000px] px-5 py-9 sm:px-7">
         <p className="text-xs tracking-widest text-primary">与日常上网分开</p>
         <h1 className="mt-2 text-3xl font-semibold">Claude 专用网络</h1>
