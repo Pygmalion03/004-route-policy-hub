@@ -29,6 +29,7 @@ import { beijingTime as time } from '@/lib/display-time';
 type View = {
   configured: boolean;
   updatedAt: string;
+  macDefaults?: { plan: string; vpsId: string } | null;
   claude?: { sourceChanged: boolean; expectedIp: string } | null;
   webshareMethod?: 'direct' | 'backbone';
   webshare: {
@@ -229,11 +230,11 @@ export function ConnectionConsole({
       setBusy(false);
     }
   }
-  async function copySubscription(ios = false) {
+  async function copySubscription(client: 'desktop' | 'mac' | 'ios' = 'desktop') {
     setBusy(true);
     setMessage('');
     try {
-      const r = await fetch(`/api/connections${ios ? '?client=ios' : ''}`, {
+      const r = await fetch(`/api/connections${client === 'desktop' ? '' : `?client=${client}`}`, {
         method: 'POST',
         headers: { 'x-admin-password': authorization() },
       });
@@ -241,7 +242,7 @@ export function ConnectionConsole({
       if (!r.ok) throw new Error(result.error);
       await navigator.clipboard.writeText(result.url);
       setMessage(
-        ios ? '手机订阅已复制。在 Clash Mi 从剪贴板导入，选择「内置-不覆写」、规则模式并开启自动更新。Claude 域名固定出口，其他网站除直连例外外默认走日常代理。地址含私人令牌，请勿分享。' : '已复制。仅首次接入新设备需要导入；更换参数后刷新已有订阅即可。地址包含私人令牌，请勿分享。',
+        client === 'ios' ? '手机订阅已复制。在 Clash Mi 从剪贴板导入，选择「内置-不覆写」、规则模式并开启自动更新。Claude 域名固定出口，其他网站除直连例外外默认走日常代理。地址含私人令牌，请勿分享。' : client === 'mac' ? 'Mac 订阅已复制。导入 Clash Verge 后选择规则模式、开启 TUN，并检查使用方案与节点。Claude 专用浏览器和系统保护需要另外安装。' : '电脑订阅已复制。仅首次接入新设备需要导入；更换参数后刷新已有订阅即可。地址包含私人令牌，请勿分享。',
       );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : '复制失败');
@@ -291,9 +292,12 @@ export function ConnectionConsole({
               disabled={busy || dirty}
             >
               <Copy className="size-4" />
-              复制电脑订阅
+              复制 Windows 订阅
             </Button>
-            <Button variant="outline" onClick={() => void copySubscription(true)} disabled={busy || dirty || !data.claude}>
+            <Button variant="outline" onClick={() => void copySubscription('mac')} disabled={busy || dirty || !data.macDefaults}>
+              <Copy className="size-4" />复制 Mac 订阅
+            </Button>
+            <Button variant="outline" onClick={() => void copySubscription('ios')} disabled={busy || dirty || !data.claude}>
               <Copy className="size-4" />复制 iPhone 订阅
             </Button>
             </div>
@@ -450,6 +454,25 @@ export function ConnectionConsole({
         ) : (
           data?.configured && (
             <>
+              <section className="mb-6 rounded-2xl border bg-card p-5" aria-label="Mac 恢复配置">
+                <h2 className="font-semibold">Mac 重装后的默认线路</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">网站保存 Mac 的分流规则和这里选定的初始线路。{data.macDefaults ? '' : '请先选择并保存，才能复制 Mac 订阅。'}导入后在 Clash 选择规则模式并开启 TUN。以后在 Clash 切换线路，不会自动改动这里。</p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <label className="text-sm">默认使用方案
+                    <select className="mt-2 block w-full rounded-md border bg-background px-3 py-2" value={data.macDefaults?.plan || ''} onChange={event => change({ ...data, macDefaults: { plan: event.target.value, vpsId: data.macDefaults?.vpsId || '' } })}>
+                      <option value="" disabled>请选择</option>
+                      {plans.filter(plan => plan.needs === 'vps' ? vpsNodes.length > 0 : activeAirports.length > 0).map(plan => <option key={plan.name} value={plan.name}>{plan.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-sm">默认 VPS
+                    <select className="mt-2 block w-full rounded-md border bg-background px-3 py-2" value={data.macDefaults?.vpsId || ''} onChange={event => change({ ...data, macDefaults: { plan: data.macDefaults?.plan || '', vpsId: event.target.value } })}>
+                      <option value="">请选择</option>
+                      {vpsNodes.map(node => <option key={node.id} value={node.id}>{node.name}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <p className="mt-3 text-xs leading-6 text-muted-foreground">修改后点页面底部的「保存并发布」。机场地区需要在 Clash 中选择；Claude 专用浏览器和系统保护不会随订阅安装。</p>
+              </section>
               <details className="mb-6 rounded-2xl border bg-card p-5"><summary className="cursor-pointer font-semibold">切换方法与四种使用方案</summary><h2 className="sr-only">日常的四种使用方案</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">在 Clash 选择「使用方案」；需要机场时，再选「机场节点」。这里的选择不影响 Claude 专用入口。</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{plans.map(plan => <div key={plan.name} className="rounded-xl bg-muted/50 p-4"><h3 className="text-sm font-medium">{plan.name}</h3><p className="mt-2 text-xs text-muted-foreground">{plan.path} · 出口：{plan.exit}</p></div>)}</div></details>
               {activeAirports.some(a => a.refreshError) && <section aria-label="配置提醒" className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
                 <h2 className="font-semibold">机场订阅需要检查</h2>

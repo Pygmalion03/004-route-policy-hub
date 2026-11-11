@@ -10,11 +10,13 @@ import { parseVpsLink, type VpsNode } from './vps';
 type Node = Record<string, unknown> & { name: string };
 export type Endpoint = { server: string; port: number; type: 'http' | 'socks5'; username: string; password: string };
 type Airport = { id: string; name: string; url: string; nodes: Node[]; enabled?: boolean; refreshedAt?: string; refreshError?: string };
+type MacDefaults = { plan: string; vpsId: string };
 export type ConnectionStore = {
   version: 1; updatedAt: string; token: string;
   webshare: { direct: Endpoint; backbone: Endpoint };
   airports: Airport[];
   vpsNodes?: VpsNode[];
+  macDefaults?: MacDefaults;
   webshareMethod?: 'direct' | 'backbone';
   claude?: { mode?: 'vps' | 'webshare'; vpsId?: string; expectedIp: string; pinnedAt: string; frontName: string; endpoint?: Endpoint; front: Node };
   defaults: Record<string, unknown>;
@@ -45,6 +47,7 @@ export function publicConnections(store: ConnectionStore | null) {
     (pinned.mode !== 'vps' && !isDeepStrictEqual(store.webshare[store.webshareMethod || 'direct'], pinned.endpoint))));
   return {
     configured: true, updatedAt: store.updatedAt,
+    macDefaults: store.macDefaults || null,
     webshareMethod: store.webshareMethod || 'direct',
     claude: pinned ? { mode: pinned.mode || 'webshare', vpsId: source?.id, expectedIp: pinned.expectedIp, pinnedAt: pinned.pinnedAt, frontName: pinned.frontName, sourceChanged, port: 17997 } : null,
     webshare: Object.fromEntries(Object.entries(store.webshare).map(([key, endpoint]) => [key, { ...endpoint, password: '', hasPassword: Boolean(endpoint.password) }])),
@@ -78,7 +81,7 @@ export async function saveConnections(input: unknown) {
   const operation = pending.catch(() => {}).then(async () => {
     const current = await readConnections();
     if (!current) throw new Error('请先导入本机已验证的配置');
-    const value = input as { updatedAt: string; pinClaude?: { vpsId: string; expectedIp: string; mode?: 'vps' | 'webshare' }; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string; enabled?: boolean }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
+    const value = input as { updatedAt: string; macDefaults?: MacDefaults | null; pinClaude?: { vpsId: string; expectedIp: string; mode?: 'vps' | 'webshare' }; webshareMethod?: 'direct' | 'backbone'; webshare: Record<string, Endpoint>; airports: { id: string; name: string; url: string; enabled?: boolean }[]; vpsNodes?: { id: string; name: string; shareUrl: string }[] };
     if (value.updatedAt !== current.updatedAt) throw new Error('配置已被其他页面修改，请重新读取后再保存');
     const vpsInput = value.vpsNodes ?? current.vpsNodes?.map(v => ({ id: v.id, name: v.name, shareUrl: '' })) ?? [];
     if (!Array.isArray(vpsInput) || vpsInput.length > 10) throw new Error('自建 VPS 数量不能超过 10 个');
@@ -127,6 +130,14 @@ export async function saveConnections(input: unknown) {
     const webshareMethod = value.webshareMethod ?? current.webshareMethod ?? 'direct';
     if (!['direct', 'backbone'].includes(webshareMethod)) throw new Error('请选择 Direct 或 Backbone 接入');
     const next: ConnectionStore = { ...current, airports, vpsNodes, webshare, webshareMethod, updatedAt: new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString() };
+    if (value.macDefaults) {
+      const { plan, vpsId } = value.macDefaults;
+      if (!['只用 VPS', 'VPS＋Webshare', '只用机场', '机场＋Webshare'].includes(plan)) throw new Error('请选择 Mac 默认使用方案');
+      if (typeof vpsId !== 'string' || (vpsId && !vpsNodes.some(v => v.id === vpsId))) throw new Error('请选择已配置的 Mac 默认 VPS');
+      if (plan.includes('VPS') && !vpsId) throw new Error('请选择 Mac 默认 VPS');
+      if (plan.includes('机场') && !airports.some(airport => airport.enabled !== false)) throw new Error('Mac 默认方案需要启用的机场，请先更换 Mac 默认方案');
+      next.macDefaults = { plan, vpsId };
+    }
     if (value.pinClaude) {
       const front = vpsNodes.find(v => v.id === value.pinClaude!.vpsId);
       const expectedIp = String(value.pinClaude.expectedIp || '').trim();
@@ -169,7 +180,7 @@ export async function refreshConnections() {
   pending = operation;
   return operation;
 }
-export async function generateConfiguration(store: ConnectionStore, origin: string, client: 'desktop' | 'ios' = 'desktop') {
+export async function generateConfiguration(store: ConnectionStore, origin: string, client: 'desktop' | 'ios' | 'mac' = 'desktop') {
   const proxies: Record<string, unknown>[] = [];
   const endpoint = store.webshare[store.webshareMethod || 'direct'];
   const airports = store.airports.filter(airport => airport.enabled !== false);
@@ -234,6 +245,32 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     'rule-set:china-domains': domesticResolvers,
   };
   if (client === 'desktop') return config;
+  if (client === 'mac') {
+    const directProcesses = [
+      'UURemote', 'UURemoteDaemon', 'UURemoteService', 'UURemoteServer',
+      'Hihonornote', 'HnOfficeCenter', 'HnMirror', 'HonorConnect Helper',
+      'HonorConnect Helper (GPU)', 'HonorConnect Helper (Renderer)',
+      'HonorConnect Helper (Plugin)', 'HonorConnect Login Helper',
+      'Tailscale', 'io.tailscale.ipn.macsys.network-extension',
+    ].map(name => `PROCESS-NAME,${name},DIRECT`);
+    Object.assign(config, {
+      'find-process-mode': 'always',
+      ipv6: true,
+      tun: { enable: true, stack: 'gvisor', 'auto-route': true, 'strict-route': false, 'auto-detect-interface': true, 'dns-hijack': ['any:53'] },
+    });
+    config.rules = [...directProcesses, ...config.rules.filter((rule: string) =>
+      !/^RULE-SET,china-(domains|ips),/.test(rule) && !directProcesses.includes(rule)
+    )];
+    for (const key of ['rule-set:hub-direct', 'rule-set:hub-proxy', 'rule-set:china-domains']) delete config.dns['nameserver-policy'][key];
+    const plan = groups.find(group => group.name === '使用方案');
+    const preferredPlan = store.macDefaults?.plan;
+    if (preferredPlan && plan?.proxies?.includes(preferredPlan)) plan.proxies = [preferredPlan, ...plan.proxies.filter(name => name !== preferredPlan)];
+    const vps = groups.find(group => group.name === 'VPS 节点');
+    const preferredVps = vpsNodes.find(node => node.id === store.macDefaults?.vpsId);
+    const preferredName = preferredVps && `自建 VPS｜${preferredVps.name}`;
+    if (preferredName && vps?.proxies?.includes(preferredName)) vps.proxies = [preferredName, ...vps.proxies.filter(name => name !== preferredName)];
+    return config;
+  }
   if (!claudeName) throw new Error('请先设置 Claude 固定出口，再导入手机订阅');
   // iOS uses domain routing instead of the Mac's dedicated local listeners.
   config.rules = config.rules.filter((rule: string) => !/^RULE-SET,china-(domains|ips),/.test(rule));

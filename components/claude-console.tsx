@@ -138,7 +138,7 @@ export function ClaudeConsole() {
           <div className="rounded-2xl border bg-card p-5">
             <h2 className="font-semibold">Mac 独立策略</h2>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">默认走代理；UU、荣耀投屏、局域网、Tailscale 和手动直连例外保留。Claude 使用单独固定出口。</p>
-            <p className="mt-2 text-xs leading-6 text-muted-foreground">当前 Mac 通过本地订阅脚本应用；网站保存配置不等于本机已应用或实测。</p>
+            <p className="mt-2 text-xs leading-6 text-muted-foreground">重装或更换 Mac 时，可在线路管理复制 Mac 订阅；Claude 专用浏览器和本机保护还需单独安装。网站不能确认本机是否已应用。</p>
           </div>
           <div className="rounded-2xl border bg-card p-5">
             <h2 className="font-semibold">iPhone · Clash Mi</h2>

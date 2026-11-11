@@ -27,7 +27,9 @@ export async function POST(request: Request) {
   const store = await readConnections();
   if (!store) return Response.json({ error: '尚未配置' }, { status: 409, headers });
   const origin = process.env.PUBLIC_BASE_URL || new URL(request.url).origin;
-  const ios = new URL(request.url).searchParams.get('client') === 'ios';
-  if (ios && !store.claude) return Response.json({ error: '请先设置 Claude 固定出口' }, { status: 409, headers });
-  return Response.json({ url: `${origin}/subscription?token=${store.token}${ios ? '&client=ios' : ''}` }, { headers });
+  const requested = new URL(request.url).searchParams.get('client');
+  const client = requested === 'ios' || requested === 'mac' ? requested : 'desktop';
+  if (client === 'ios' && !store.claude) return Response.json({ error: '请先设置 Claude 固定出口' }, { status: 409, headers });
+  if (client === 'mac' && !store.macDefaults) return Response.json({ error: '请先保存 Mac 的默认线路' }, { status: 409, headers });
+  return Response.json({ url: `${origin}/subscription?token=${store.token}${client === 'desktop' ? '' : `&client=${client}`}` }, { headers });
 }

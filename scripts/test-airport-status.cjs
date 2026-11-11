@@ -77,3 +77,20 @@ test('an airport can be disabled and re-enabled without replacing its subscripti
   const config = await generateConfiguration(saved, 'https://example.test');
   assert.deepEqual(Object.keys(config['proxy-providers']), ['current']);
 });
+
+test('Mac defaults persist and older clients cannot erase them', async () => {
+  const store = makeStore();
+  await writeConnections(store);
+  let view = publicConnections(store);
+  view.macDefaults = { plan: '只用 VPS', vpsId: 'vps' };
+  let saved = await saveConnections(view);
+  assert.deepEqual(saved.macDefaults, { plan: '只用 VPS', vpsId: 'vps' });
+  view = publicConnections(saved);
+  delete view.macDefaults;
+  saved = await saveConnections(view);
+  assert.deepEqual(saved.macDefaults, { plan: '只用 VPS', vpsId: 'vps' });
+  view = publicConnections(saved);
+  view.macDefaults = { plan: '只用 VPS', vpsId: 'missing' };
+  await assert.rejects(saveConnections(view), /默认 VPS/);
+  assert.deepEqual(publicConnections(await refreshConnections()).macDefaults, { plan: '只用 VPS', vpsId: 'vps' });
+});

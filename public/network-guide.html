@@ -14,7 +14,7 @@
 <main>
   <div class="intro"><div class="eyebrow">NETWORK GUIDE / 使用说明</div><h1>让每条连接都有去处。</h1><p class="lead">这里说明网站给设备下发的规则。设备当前是否已刷新、选了哪个节点，要在设备的 Clash 中查看。</p><div class="links"><a class="button" href="/">查看设备总览</a><a class="button secondary" href="/policies">查看网站例外</a></div></div>
   <section><div class="eyebrow">01 / 设备</div><h2>三台设备，各有规则</h2><div class="grid">
-    <article class="card"><div class="label">本机专用规则</div><h3>Mac</h3><p>没有命中直连例外的网站走所选代理。UU 远程、荣耀投屏、局域网及 Tailscale 等有直连规则。Claude 通过专用 Edge 或项目启动器使用固定线路。</p></article>
+    <article class="card"><div class="label">Mac 订阅</div><h3>Mac</h3><p>新 Mac 在线路管理复制 Mac 订阅并导入 Clash Verge，选择规则模式并开启 TUN。UU 远程、荣耀投屏、局域网及直连清单保留直连，其余默认走代理。Claude 专用 Edge 和本机保护需要另行安装。</p></article>
     <article class="card"><div class="label">iPhone 订阅</div><h3>iPhone</h3><p>没有命中直连例外的网站走所选代理；Claude 相关域名走固定线路。Clash Mi 要使用「内置-不覆写」和规则模式，并保持连接。</p></article>
     <article class="card"><div class="label">电脑订阅</div><h3>Windows</h3><p>先按明确的网站例外判断，再查国内域名和 IP 清单；仍未命中的连接走所选代理。订阅本身不代表已安装 Mac 的 Claude 专用保护。</p></article>
   </div></section>

@@ -86,3 +86,41 @@ test('Mac override keeps its original proxy DNS and strips automatic China routi
   assert.ok(!config.rules.some(rule => rule.startsWith('RULE-SET,china-')));
   assert.ok(config.rules.includes('MATCH,使用方案'));
 });
+
+test('Mac subscription reproduces the existing Mac routing without a local script', async () => {
+  const desktop = await generateConfiguration(store, 'https://example.test');
+  const expected = JSON.parse(JSON.stringify(desktop));
+  const context = vm.createContext({ config: expected });
+  const source = fs.readFileSync(path.join(__dirname, 'mac-routing.js'), 'utf8');
+  vm.runInContext(`${source}\nmain(config);`, context);
+
+  const mac = await generateConfiguration(store, 'https://example.test', 'mac');
+  assert.deepEqual(mac.rules, Array.from(expected.rules));
+  assert.deepEqual(mac.dns, expected.dns);
+  assert.equal(mac.mode, expected.mode);
+  assert.equal(mac['find-process-mode'], expected['find-process-mode']);
+  assert.deepEqual(mac.listeners, desktop.listeners);
+  assert.equal(mac.ipv6, true);
+  assert.deepEqual(mac.tun, {
+    enable: true, stack: 'gvisor', 'auto-route': true, 'strict-route': false,
+    'auto-detect-interface': true, 'dns-hijack': ['any:53'],
+  });
+  assert.equal(desktop.tun, undefined);
+});
+
+test('saved Mac defaults set initial selections without changing other subscriptions', async () => {
+  const saved = {
+    ...store,
+    vpsNodes: [
+      ...store.vpsNodes,
+      { id: 'second', name: 'second', node: { name: 'second', type: 'direct', server: '127.0.0.1', port: 8000 } },
+    ],
+    macDefaults: { plan: '只用 VPS', vpsId: 'second', airportNode: '' },
+  };
+  const mac = await generateConfiguration(saved, 'https://example.test', 'mac');
+  const desktop = await generateConfiguration(saved, 'https://example.test', 'desktop');
+  assert.equal(mac['proxy-groups'].find(g => g.name === '使用方案').proxies[0], '只用 VPS');
+  assert.equal(mac['proxy-groups'].find(g => g.name === 'VPS 节点').proxies[0], '自建 VPS｜second');
+  assert.equal(desktop['proxy-groups'].find(g => g.name === '使用方案').proxies[0], 'VPS＋Webshare');
+  assert.equal(desktop['proxy-groups'].find(g => g.name === 'VPS 节点').proxies[0], '自建 VPS｜test');
+});
