@@ -93,6 +93,8 @@ test('Mac subscription reproduces the existing Mac routing without a local scrip
   const context = vm.createContext({ config: expected });
   const source = fs.readFileSync(path.join(__dirname, 'mac-routing.js'), 'utf8');
   vm.runInContext(`${source}\nmain(config);`, context);
+  expected.dns.ipv6 = true;
+  expected.dns['fake-ip-range6'] = '2001:2::0/64';
 
   const mac = await generateConfiguration(store, 'https://example.test', 'mac');
   assert.deepEqual(mac.rules, Array.from(expected.rules));

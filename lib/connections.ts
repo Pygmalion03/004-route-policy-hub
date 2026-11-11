@@ -262,6 +262,8 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
       !/^RULE-SET,china-(domains|ips),/.test(rule) && !directProcesses.includes(rule)
     )];
     for (const key of ['rule-set:hub-direct', 'rule-set:hub-proxy', 'rule-set:china-domains']) delete config.dns['nameserver-policy'][key];
+    config.dns.ipv6 = true;
+    config.dns['fake-ip-range6'] = '2001:2::0/64';
     const plan = groups.find(group => group.name === '使用方案');
     const preferredPlan = store.macDefaults?.plan;
     if (preferredPlan && plan?.proxies?.includes(preferredPlan)) plan.proxies = [preferredPlan, ...plan.proxies.filter(name => name !== preferredPlan)];
