@@ -88,10 +88,10 @@ export function DirectSiteConsole() {
     <main className="min-h-screen bg-background text-foreground">
       <HubNav active="policies" />
       <div className="mx-auto max-w-[1000px] px-5 py-9 sm:px-7">
-        <p className="text-xs tracking-widest text-primary">三台设备共用</p>
+        <p className="text-xs tracking-widest text-primary">共用网站规则</p>
         <h1 className="mt-2 text-3xl font-semibold">管理网站连接方式</h1>
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          在这里添加一次，Mac、iPhone 和 Windows 都会使用。默认选择直连，也可以指定走代理。
+          为指定网站添加直连或代理例外，由已接入规则的客户端与网关读取。
         </p>
         <div className="my-6 rounded-2xl border border-primary/20 bg-secondary/40 p-5 text-sm leading-7">
           <strong>修改后通常几分钟生效。</strong>

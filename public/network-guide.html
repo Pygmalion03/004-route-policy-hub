@@ -1,32 +1,49 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>使用说明 · 网络管理</title>
-  <style>
-    :root{color-scheme:light;--ink:#192d24;--muted:#65776b;--line:#dce6dc;--accent:#1b6046;--page:#f6f7f3}
-    *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}header{background:#fff;border-bottom:1px solid var(--line)}nav{max-width:1120px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:19px 24px;font-size:14px}nav .brand{font-weight:700;color:var(--ink)}nav div{display:flex;flex-wrap:wrap;gap:18px}main{max-width:1050px;margin:auto;padding:50px 24px 80px}.eyebrow{font-size:12px;font-weight:700;letter-spacing:.16em;color:#668575}h1{font-size:clamp(34px,5vw,52px);letter-spacing:-.04em;margin:14px 0}h2{font-size:25px;letter-spacing:-.02em;margin:0 0 12px}h3{font-size:17px;margin:0 0 10px}p,li{line-height:1.85}p{color:var(--muted)}.lead{max-width:690px;font-size:16px}.intro{padding-bottom:30px;border-bottom:1px solid var(--line)}section{margin-top:48px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:white;border:1px solid var(--line);border-radius:20px;padding:23px}.card p{font-size:14px;margin:0}.label{font-size:12px;font-weight:600;color:#60806c;margin-bottom:14px}.list{background:white;border:1px solid var(--line);border-radius:20px;padding:8px 24px}.row{display:grid;grid-template-columns:170px 1fr;gap:20px;padding:20px 0}.row+.row{border-top:1px solid #edf1eb}.row p{font-size:14px;margin:0}.notice{background:#113d2e;color:#e7f1e9;border-radius:20px;padding:26px}.notice p{color:#cee1d4;margin:8px 0 0;font-size:14px}.steps{padding-left:23px;color:var(--muted);font-size:14px}.steps li+li{margin-top:9px}.button{display:inline-block;background:var(--accent);color:white;border-radius:999px;padding:10px 17px;font-size:14px;font-weight:600}.button:hover{background:#124d37;color:white;text-decoration:none}.links{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}.secondary{background:white;color:var(--accent);border:1px solid var(--line)}footer{margin-top:50px;padding-top:24px;border-top:1px solid var(--line);font-size:12px;color:#89978d}@media(max-width:700px){nav{align-items:flex-start;flex-direction:column}nav div{gap:12px}.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr;gap:4px}main{padding-top:35px}}
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>使用帮助 · 网络管理</title>
+<style>
+:root{color-scheme:light;--bg:#f5f8f6;--card:#fff;--text:#243b32;--muted:#61746b;--line:#dbe5df;--green:#205a44;--soft:#eaf3ee}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}a{color:var(--green);text-underline-offset:4px}header{border-bottom:1px solid var(--line);background:var(--card)}nav{max-width:1080px;margin:auto;display:flex;align-items:center;gap:20px;padding:18px 24px;overflow-x:auto;white-space:nowrap}nav a{text-decoration:none;font-size:14px}nav .brand{font-weight:700;margin-right:auto}main{max-width:1020px;margin:auto;padding:42px 24px 60px}h1{font-size:36px;line-height:1.3;letter-spacing:-.03em;margin:8px 0 14px}h2{font-size:21px;line-height:1.4;margin:0 0 18px}h3{font-size:16px;margin:0 0 8px}p{margin:0 0 14px;color:var(--muted)}.eyebrow{font-size:12px;font-weight:600;color:var(--green)}section{margin-top:28px;padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--card)}.intro{max-width:650px}.steps{list-style:none;padding:0;margin:0;display:grid;gap:18px}.steps li{display:grid;grid-template-columns:32px 1fr;gap:12px}.num{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--soft);font-size:13px;font-weight:700;color:var(--green)}.steps p{margin:0}.note{padding:14px 16px;border-radius:10px;background:var(--soft);font-size:13px}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:480px;font-size:14px}th,td{text-align:left;padding:14px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:500;background:var(--bg)}td:first-child{font-weight:600;width:27%}details{border-top:1px solid var(--line);padding:16px 0}details:last-child{padding-bottom:0}summary{cursor:pointer;font-weight:600}details p{margin:12px 0 0}.button{display:inline-flex;padding:10px 16px;border-radius:9px;background:var(--green);color:white;text-decoration:none;font-size:14px;font-weight:600}footer{margin-top:24px;color:var(--muted);font-size:12px}@media(max-width:600px){main{padding:28px 18px 40px}section{padding:20px}h1{font-size:29px}nav{padding:15px 18px;gap:18px}nav .brand{margin-right:8px}}
+</style>
 </head>
 <body>
-<header><nav aria-label="主导航"><a class="brand" href="/">网络管理</a><div><a href="/">设备总览</a><a href="/connections">线路管理</a><a href="/policies">网站例外</a><a href="/claude">Claude 设置</a></div></nav></header>
+<header><nav aria-label="主导航"><a class="brand" href="/">网络管理</a><a href="/home-network">设备上网</a><a href="/connections">线路管理</a><a href="/policies">网站规则</a><a href="/claude">Claude</a></nav></header>
 <main>
-  <div class="intro"><div class="eyebrow">NETWORK GUIDE / 使用说明</div><h1>让每条连接都有去处。</h1><p class="lead">这里说明网站给设备下发的规则。设备当前是否已刷新、选了哪个节点，要在设备的 Clash 中查看。</p><div class="links"><a class="button" href="/">查看设备总览</a><a class="button secondary" href="/policies">查看网站例外</a></div></div>
-  <section><div class="eyebrow">01 / 设备</div><h2>三台设备，各有规则</h2><div class="grid">
-    <article class="card"><div class="label">Mac 订阅</div><h3>Mac</h3><p>新 Mac 在线路管理复制 Mac 订阅并导入 Clash Verge，选择规则模式并开启 TUN。UU 远程、荣耀投屏、局域网及直连清单保留直连，其余默认走代理。Claude 专用 Edge 和本机保护需要另行安装。</p></article>
-    <article class="card"><div class="label">iPhone 订阅</div><h3>iPhone</h3><p>没有命中直连例外的网站走所选代理；Claude 相关域名走固定线路。Clash Mi 要使用「内置-不覆写」和规则模式，并保持连接。</p></article>
-    <article class="card"><div class="label">电脑订阅</div><h3>Windows</h3><p>先按明确的网站例外判断，再查国内域名和 IP 清单；仍未命中的连接走所选代理。订阅本身不代表已安装 Mac 的 Claude 专用保护。</p></article>
-  </div></section>
-  <section><div class="eyebrow">02 / 线路</div><h2>换节点，不等于换 Claude</h2><div class="list">
-    <div class="row"><strong>只用 VPS</strong><p>连接选中的自建 VPS，网站看到该 VPS 的出口 IP。Legend 和 ByteVirt 可在 Clash 的「VPS 节点」中选择。</p></div>
-    <div class="row"><strong>VPS ＋ Webshare</strong><p>先经过所选 VPS，再经过 Webshare；最终出口是 Webshare。</p></div>
-    <div class="row"><strong>只用机场 / 机场＋Webshare</strong><p>使用已启用的机场节点。机场停用后，网站保留订阅资料，但不会继续向设备下发它的节点。</p></div>
-  </div><p>Claude 固定线路单独保存。切换普通网站使用的节点不会自动更新 Claude；若要更换 Claude 出口，请到 <a href="/claude">Claude 设置</a>单独操作。</p></section>
-  <section><div class="eyebrow">03 / 网站例外</div><h2>只为需要特殊处理的网站添加</h2><div class="notice"><strong>直连例外优先于设备的普通默认规则。</strong><p>在「网站例外」输入域名，选择直连或代理并保存。域名规则包含其子域名；一个网站可能使用多个不同域名，视频和图片不一定跟主站相同。</p></div><div class="links"><a class="button" href="/policies">打开网站例外</a></div></section>
-  <section><div class="eyebrow">04 / 更新设备</div><h2>网站改完后怎么生效</h2><div class="grid"><article class="card"><h3>修改网站例外</h3><p>保存后发布规则，客户端按规则集更新间隔拉取；也可以在 Clash 中手动刷新规则。</p></article><article class="card"><h3>增加、停用或更换线路</h3><p>在「线路管理」保存并发布，再到设备刷新已有订阅。停用节点后，如果设备此前选中了它，需重新选择。</p></article><article class="card"><h3>iPhone 更新后</h3><p>在 Clash Mi 更新现有订阅；若节点列表仍是旧的，重新连接 Clash Mi，再检查规则模式与所选节点。</p></article></div></section>
-  <section><div class="eyebrow">05 / 了解 DNS</div><h2>直连和查地址是两件事</h2><p>DNS 负责把网址查询成地址。Mac 的默认查询走所选代理；iPhone 的默认查询走 Claude 固定线路；Windows 的直连和国内域名使用国内 DNS。因此，网站连接虽然是直连，也可能因为查询方式不同而拿到不同的服务器地址。</p></section>
-  <footer>本页介绍配置原则；不显示设备实时连接，也不保证任何账号的登录或生成状态。</footer>
+<p class="eyebrow">使用帮助</p><h1>连接 Wi-Fi，在网页选择线路。</h1>
+<p class="intro">家庭设备的日常操作集中在「设备上网」。新设备先正常联网，按需要切换；已安装客户端的设备保留原有订阅入口。</p>
+<section id="device-access">
+<h2>新设备怎么接入</h2>
+<ol class="steps">
+<li><span class="num">1</span><div><h3>连接专用 Wi-Fi</h3><p>新设备默认家庭宽带直连。保留设备自动获取 IP 与 DNS 的设置。</p></div></li>
+<li><span class="num">2</span><div><h3>在网页找到这台设备</h3><p>从家庭局域网打开「设备上网」，用现有管理密码解锁。可按名称、IP 或 MAC 搜索。</p></div></li>
+<li><span class="num">3</span><div><h3>选择新加坡分流或家庭宽带</h3><p>选择即发起切换。首次接入如果仍使用原线路，断开并重连一次 Wi-Fi；之后只需在网页改线路。</p></div></li>
+</ol>
+<p class="note" style="margin-top:20px;margin-bottom:18px">设备管理仅在家庭局域网入口开放。外部域名不会提供这个控制页面。</p>
+<a class="button" href="/home-network">打开设备上网</a>
+</section>
+<section>
+<h2>线路名称怎么选</h2>
+<div class="table-wrap"><table><thead><tr><th>线路</th><th>用途</th><th>支持范围</th></tr></thead><tbody>
+<tr><td>家庭宽带直连</td><td>使用家庭宽带出口。已接入网关的设备仍由网关转发。</td><td>新设备与已接入设备</td></tr>
+<tr><td>新加坡分流 · SG</td><td>按分流规则处理连接，代理流量使用新加坡线路。</td><td>可自动接入的专用 Wi-Fi 设备与已支持设备</td></tr>
+<tr><td>洛杉矶固定出口 · LA</td><td>使用已部署的洛杉矶固定出口方案。</td><td>仅已支持的设备；新设备选项会显示“暂未开放”</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h2>怎样看是否生效</h2>
+<p><strong>规则已应用：</strong>网关确认保存的方案已执行。<strong>已观察到流量：</strong>网关观察到了这台设备的报文。二者都不是公网 IP 的自动检测结果。</p>
+<p><strong>等待设备流量：</strong>规则已准备，但尚未观察到相应流量。首次接入可重连 Wi-Fi、打开网页后刷新列表。</p>
+<p style="margin-bottom:0">在设备上检查出口后，可在设备「详情」中记录实测通过。记录是该版本方案的历史验收，切换方案后需要重新核对。</p>
+</section>
+<section>
+<h2>其他功能</h2>
+<details><summary>仍在使用 Clash / Mihomo 客户端</summary><p>在「线路管理」维护订阅、VPS 与节点。客户端按自己的更新周期拉取配置，也可手动刷新。通过 Q4 网关接入的设备无需额外安装客户端或导入订阅。</p></details>
+<details><summary>给某个网站指定直连或代理</summary><p>在「网站规则」中添加例外。域名规则包含子域名；视频、图片等资源可能使用其他域名。已接入规则提供器的客户端或网关会按各自的更新周期读取。</p></details>
+<details><summary>Claude 专用出口</summary><p>在「Claude」中维护独立保存的专用配置。普通设备线路切换不会自动部署或替换专用客户端、本机保护或账号认证。</p></details>
+<details><summary>设备不在“可管理”中</summary><p>先确认它连接了专用 Wi-Fi，再刷新或查看「全部」。其他 Wi-Fi、有线基础设备以及未授权设备不会自动接管，页面会显示原因。</p></details>
+</section>
+<footer>网络管理 · 使用帮助。实时设备状态请查看设备列表。</footer>
 </main>
-</body>
-</html>
+</body></html>

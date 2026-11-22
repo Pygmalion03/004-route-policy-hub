@@ -31,6 +31,8 @@ export type PolicyStore = {
   version: 1;
   updatedAt: string;
   policies: Policy[];
+  flexDirectFallback?: boolean;
+  strictVpsId?: string;
 };
 
 export class PolicyStoreConflictError extends Error {
@@ -194,7 +196,11 @@ export async function savePolicyStore(input: unknown): Promise<PolicyStore> {
     if (currentStore && candidate.updatedAt !== currentStore.updatedAt) {
       throw new PolicyStoreConflictError(currentStore);
     }
-    return writePolicyStore(candidate, currentStore?.updatedAt);
+    return writePolicyStore({
+      ...candidate,
+      flexDirectFallback: candidate.flexDirectFallback ?? currentStore?.flexDirectFallback,
+      strictVpsId: candidate.strictVpsId ?? currentStore?.strictVpsId,
+    }, currentStore?.updatedAt);
   });
 }
 
@@ -239,6 +245,8 @@ export function validateStore(input: unknown): PolicyStore {
   return {
     version: 1,
     updatedAt: typeof candidate.updatedAt === 'string' ? candidate.updatedAt : new Date().toISOString(),
+    ...(typeof candidate.flexDirectFallback === 'boolean' ? { flexDirectFallback: candidate.flexDirectFallback } : {}),
+    ...(typeof candidate.strictVpsId === 'string' && /^[a-z0-9-]{0,80}$/.test(candidate.strictVpsId) ? { strictVpsId: candidate.strictVpsId } : {}),
     policies,
   };
 }

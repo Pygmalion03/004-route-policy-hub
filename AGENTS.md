@@ -17,6 +17,6 @@ This repository is the source of truth for Route Policy Hub（分流清单）.
 - Persist mutable policy data only under `DATA_DIR`; never commit a real `data/policies.json`.
 - Never commit subscription URLs, proxy nodes, passwords, tokens, cookies, or real `.env` files.
 - Keep the management surface private to LAN or Tailscale unless the user explicitly approves public exposure and authentication is designed first.
-- Before changing live Q4 NAS or Cloudflare infrastructure, read `/Users/pygmalion/Documents/Codex/Projects/003-nas-cloudflare-stack/README.md`, `docs/inventory.md`, `docs/architecture.md`, and `docs/deployment-runbook.md`.
+- Before changing live Q4 NAS or Cloudflare infrastructure, read `../003-nas-cloudflare-stack/README.md`, `../003-nas-cloudflare-stack/docs/inventory.md`, `../003-nas-cloudflare-stack/docs/architecture.md`, and `../003-nas-cloudflare-stack/docs/deployment-runbook.md`.
 - Use the official Clash Verge Rev application; integrate through Mihomo rule providers rather than maintaining a custom Clash fork.
 - Run `pnpm lint` and `pnpm build` after source changes. Validate both rule endpoints and password-protected writes for deployment-sensitive changes.

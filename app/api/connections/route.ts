@@ -1,4 +1,5 @@
-import { connectionAuthorized, publicConnections, readConnections, saveConnections } from '@/lib/connections';
+import { connectionAuthorized, connectionClient, isReusableClient, publicConnections, readConnections, saveConnections } from '@/lib/connections';
+import { readPolicyStore } from '@/lib/policies';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 const headers = { 'cache-control': 'no-store' };
@@ -27,9 +28,12 @@ export async function POST(request: Request) {
   const store = await readConnections();
   if (!store) return Response.json({ error: '尚未配置' }, { status: 409, headers });
   const origin = process.env.PUBLIC_BASE_URL || new URL(request.url).origin;
-  const requested = new URL(request.url).searchParams.get('client');
-  const client = requested === 'ios' || requested === 'mac' ? requested : 'desktop';
-  if (client === 'ios' && !store.claude) return Response.json({ error: '请先设置 Claude 固定出口' }, { status: 409, headers });
+  const client = connectionClient(new URL(request.url).searchParams.get('client'));
   if (client === 'mac' && !store.macDefaults) return Response.json({ error: '请先保存 Mac 的默认线路' }, { status: 409, headers });
-  return Response.json({ url: `${origin}/subscription?token=${store.token}${client === 'desktop' ? '' : `&client=${client}`}` }, { headers });
+  if (client === 'strict-mac' || client === 'strict-ios') {
+    const policy = await readPolicyStore();
+    if (!store.vpsNodes?.some(node => node.id === policy.strictVpsId)) return Response.json({ error: '请先保存严格方案的 VPS' }, { status: 409, headers });
+  }
+  const endpoint = isReusableClient(client) ? '/subscription/plan' : '/subscription';
+  return Response.json({ url: `${origin}${endpoint}?token=${store.token}${client === 'desktop' ? '' : `&client=${client}`}` }, { headers });
 }

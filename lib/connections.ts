@@ -180,13 +180,24 @@ export async function refreshConnections() {
   pending = operation;
   return operation;
 }
-export async function generateConfiguration(store: ConnectionStore, origin: string, client: 'desktop' | 'ios' | 'mac' = 'desktop') {
+export function connectionClient(value: string | null) {
+  return value === 'ios' || value === 'mac' || value === 'flex' || value === 'strict-mac' || value === 'strict-ios' ? value : 'desktop';
+}
+
+export function isReusableClient(client: ReturnType<typeof connectionClient>) {
+  return client === 'flex' || client === 'strict-mac' || client === 'strict-ios';
+}
+
+export async function generateConfiguration(store: ConnectionStore, origin: string, client: ReturnType<typeof connectionClient> = 'desktop') {
+  const strict = client === 'strict-mac' || client === 'strict-ios';
+  const policy = await readPolicyStore();
   const proxies: Record<string, unknown>[] = [];
   const endpoint = store.webshare[store.webshareMethod || 'direct'];
-  const airports = store.airports.filter(airport => airport.enabled !== false);
+  const airports = strict ? [] : store.airports.filter(airport => airport.enabled !== false);
   if (airports.length) proxies.push({ ...endpoint, name: 'Webshare · 机场通道', 'dialer-proxy': '机场节点' });
-  const vpsNodes = store.vpsNodes || [];
-  if (vpsNodes.length) proxies.push({ ...endpoint, name: 'Webshare · VPS 通道', 'dialer-proxy': 'VPS 节点' });
+  const vpsNodes = (store.vpsNodes || []).filter(node => !strict || node.id === policy.strictVpsId);
+  if (strict && !vpsNodes.length) throw new Error('请先选择严格方案的 VPS');
+  if (!strict && vpsNodes.length) proxies.push({ ...endpoint, name: 'Webshare · VPS 通道', 'dialer-proxy': 'VPS 节点' });
   proxies.push(...vpsNodes.map(v => ({ ...v.node, name: `自建 VPS｜${v.name}` })));
   const claudeName = store.claude ? `Claude 固定出口｜${store.claude.expectedIp}` : null;
   if (store.claude?.mode === 'vps') proxies.push({ ...store.claude.front, name: claudeName! });
@@ -205,13 +216,12 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     ...(vpsNodes.length ? [{ name: 'VPS＋Webshare', proxy: 'Webshare · VPS 通道' }, { name: '只用 VPS', proxy: 'VPS 节点' }] : []),
     ...(airports.length ? [{ name: '只用机场', proxy: '机场节点' }] : []),
   ];
-  const groups = [
+  const groups = strict ? [{ name: '使用方案', type: 'select', proxies: [`自建 VPS｜${vpsNodes[0].name}`] }] : [
     { name: '使用方案', type: 'select', proxies: plans.map(p => p.name) },
     ...(airports.length ? [{ name: '机场节点', type: 'select', use: airports.map(a => a.id), 'empty-fallback': 'REJECT' }] : []),
     ...(vpsNodes.length ? [{ name: 'VPS 节点', type: 'select', hidden: vpsNodes.length === 1, proxies: vpsNodes.map(v => `自建 VPS｜${v.name}`) }] : []),
     ...plans.map(p => ({ name: p.name, type: 'select', hidden: true, proxies: [p.proxy] })),
   ];
-  const policy = await readPolicyStore();
   const privateRules = [
     `DOMAIN,${new URL(origin).hostname},DIRECT`,
     'IP-CIDR,127.0.0.0/8,DIRECT,no-resolve', 'IP-CIDR,10.0.0.0/8,DIRECT,no-resolve',
@@ -232,10 +242,12 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     ],
     'rule-providers': {
       ...ruleProviders,
-      'china-domains': { type: 'http', behavior: 'domain', format: 'mrs', url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs', path: './rule_providers/china-domains.mrs', interval: 86400, proxy: '使用方案' },
-      'china-ips': { type: 'http', behavior: 'ipcidr', format: 'mrs', url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs', path: './rule_providers/china-ips.mrs', interval: 86400, proxy: '使用方案' },
+      ...(!strict ? {
+        'china-domains': { type: 'http', behavior: 'domain', format: 'mrs', url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs', path: './rule_providers/china-domains.mrs', interval: 86400, proxy: '使用方案' },
+        'china-ips': { type: 'http', behavior: 'ipcidr', format: 'mrs', url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs', path: './rule_providers/china-ips.mrs', interval: 86400, proxy: '使用方案' },
+      } : {}),
     },
-    rules: [...privateRules, 'RULE-SET,hub-direct,DIRECT', 'RULE-SET,hub-proxy,使用方案', 'RULE-SET,china-domains,DIRECT', 'RULE-SET,china-ips,DIRECT', 'MATCH,使用方案'],
+    rules: [...privateRules, 'RULE-SET,hub-direct,DIRECT', 'RULE-SET,hub-proxy,使用方案', 'RULE-SET,china-domains,DIRECT', 'RULE-SET,china-ips,DIRECT', 'MATCH,使用方案', ...(strict ? ['MATCH,REJECT'] : [])],
   };
   const domesticResolvers = ['https://doh.pub/dns-query#DIRECT', 'https://dns.alidns.com/dns-query#DIRECT'];
   config.dns['nameserver-policy'] = {
@@ -244,23 +256,33 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     'rule-set:hub-proxy': config.dns.nameserver,
     'rule-set:china-domains': domesticResolvers,
   };
-  if (client === 'desktop') return config;
-  if (client === 'mac') {
+  if (client === 'desktop' || client === 'flex') {
+    if (client === 'flex' && policy.flexDirectFallback && plans.length) {
+      const daily = '日常线路与兜底';
+      groups.push({ name: daily, type: 'select', proxies: ['使用方案', 'DIRECT'] });
+      config.rules = config.rules.map((rule: string) => rule.replace(/,使用方案$/, `,${daily}`));
+      config.dns.nameserver = (config.dns.nameserver as string[]).map(resolver => resolver.replace(/#使用方案$/, `#${daily}`));
+      config.dns['nameserver-policy']['rule-set:hub-proxy'] = config.dns.nameserver;
+    }
+    return config;
+  }
+  if (client === 'mac' || client === 'strict-mac') {
     const directProcesses = [
       'UURemote', 'UURemoteDaemon', 'UURemoteService', 'UURemoteServer',
       'Hihonornote', 'HnOfficeCenter', 'HnMirror', 'HonorConnect Helper',
       'HonorConnect Helper (GPU)', 'HonorConnect Helper (Renderer)',
       'HonorConnect Helper (Plugin)', 'HonorConnect Login Helper',
-      'Tailscale', 'io.tailscale.ipn.macsys.network-extension',
     ].map(name => `PROCESS-NAME,${name},DIRECT`);
+    const networkProcesses = ['Tailscale', 'io.tailscale.ipn.macsys.network-extension'].map(name => `PROCESS-NAME,${name},DIRECT`);
     Object.assign(config, {
       'find-process-mode': 'always',
       ipv6: true,
-      tun: { enable: true, stack: 'gvisor', 'auto-route': true, 'strict-route': false, 'auto-detect-interface': true, 'dns-hijack': ['any:53'] },
+      tun: { enable: true, stack: 'gvisor', 'auto-route': true, 'strict-route': strict, 'auto-detect-interface': true, 'dns-hijack': ['any:53'] },
     });
-    config.rules = [...directProcesses, ...config.rules.filter((rule: string) =>
-      !/^RULE-SET,china-(domains|ips),/.test(rule) && !directProcesses.includes(rule)
-    )];
+    const rules = config.rules.filter((rule: string) => !/^RULE-SET,china-(domains|ips),/.test(rule));
+    config.rules = strict
+      ? [...networkProcesses, ...rules.flatMap((rule: string) => rule === 'MATCH,使用方案' ? [...directProcesses, rule] : [rule])]
+      : [...directProcesses, ...networkProcesses, ...rules];
     for (const key of ['rule-set:hub-direct', 'rule-set:hub-proxy', 'rule-set:china-domains']) delete config.dns['nameserver-policy'][key];
     config.dns.ipv6 = true;
     config.dns['fake-ip-range6'] = '2001:2::0/64';
@@ -273,20 +295,20 @@ export async function generateConfiguration(store: ConnectionStore, origin: stri
     if (preferredName && vps?.proxies?.includes(preferredName)) vps.proxies = [preferredName, ...vps.proxies.filter(name => name !== preferredName)];
     return config;
   }
-  if (!claudeName) throw new Error('请先设置 Claude 固定出口，再导入手机订阅');
+  // iOS plans can use their selected route without a separate dedicated profile.
   // iOS uses domain routing instead of the Mac's dedicated local listeners.
   config.rules = config.rules.filter((rule: string) => !/^RULE-SET,china-(domains|ips),/.test(rule));
   for (const key of ['listeners', 'external-controller', 'external-controller-tls', 'external-controller-unix', 'external-ui', 'external-ui-url', 'secret', 'port', 'socks-port', 'redir-port', 'tproxy-port']) delete config[key];
   config.tun = { enable: true, stack: 'mixed', 'auto-route': true, 'strict-route': true, 'dns-hijack': ['any:53', 'tcp://any:53'] };
-  const resolver = `https://1.1.1.1/dns-query#${claudeName}`;
+  const resolver = `https://1.1.1.1/dns-query#${strict ? '使用方案' : (claudeName || '使用方案')}`;
   config.dns = {
     enable: true, ipv6: false, 'enhanced-mode': 'fake-ip', 'fake-ip-range': '198.18.0.1/16',
     'default-nameserver': ['1.1.1.1', '1.0.0.1'],
-    'proxy-server-nameserver': [resolver], nameserver: [resolver],
+    'proxy-server-nameserver': strict ? ['1.1.1.1', '1.0.0.1'] : [resolver], nameserver: [resolver],
     'fake-ip-filter': ['*.lan', '*.local', 'localhost'],
   };
   const domains = ['claude.ai', 'claude.com', 'anthropic.com', 'claudeusercontent.com', 'claudeusercontent.net', 'claudemcpclient.com'];
-  config.rules.unshift(...domains.map(domain => `DOMAIN-SUFFIX,${domain},${claudeName}`), `DOMAIN,ipv4.webshare.io,${claudeName}`);
+  if (claudeName) config.rules.unshift(...domains.map(domain => `DOMAIN-SUFFIX,${domain},${claudeName}`), `DOMAIN,ipv4.webshare.io,${claudeName}`);
   // Match the verified phone's initial daily plan; stored client selections persist.
   const plan = groups.find(group => group.name === '使用方案');
   if (plan?.proxies?.includes('只用 VPS')) plan.proxies = ['只用 VPS', ...plan.proxies.filter(name => name !== '只用 VPS')];

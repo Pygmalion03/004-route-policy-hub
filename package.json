@@ -9,8 +9,13 @@
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",
-    "lint": "oxlint app components/policy-console.tsx components/connection-console.tsx components/hub-nav.tsx components/usage-guide.tsx components/claude-console.tsx components/direct-site-console.tsx components/device-overview.tsx lib types",
-    "format": "oxfmt"
+    "lint": "oxlint app components/policy-console.tsx components/connection-console.tsx components/hub-nav.tsx components/usage-guide.tsx components/claude-console.tsx components/direct-site-console.tsx components/device-overview.tsx components/home-network-console.tsx components/home-policy-panel.tsx components/lan-device-panel.tsx lib types proxy.ts",
+    "test:home-network": "node --test scripts/test-home-network.cjs",
+    "test:home-network:http": "node scripts/test-home-network-http.cjs",
+    "export:home-network": "node scripts/export-home-network.cjs",
+    "format": "oxfmt",
+    "test:devices": "node --test scripts/test-device-runtime-control.cjs scripts/test-direct-onboarding.cjs scripts/test-lan-devices.cjs scripts/test-one-click-device-activation.cjs scripts/test-oneclick-network-config.cjs scripts/test-oneclick-network-binding.cjs scripts/test-zte-oneclick-binding.cjs scripts/test-zte-session-post.cjs",
+    "test:devices:http": "node scripts/test-oneclick-http.cjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

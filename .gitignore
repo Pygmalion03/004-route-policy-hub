@@ -39,3 +39,24 @@ next-env.d.ts
 /work/
 /data/
 /.claude-workspaces/
+
+# machine-local tooling and generated caches
+/.serena/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+
+# private key material
+*.key
+*.p12
+*.pfx
+
+# private local notes; publish sanitized documentation instead
+/docs/NEXT-SESSION-HANDOFF-*.md
+/docs/RPH-SPLIT-5G-AUTO-ONBOARDING-AUDIT-*.md
+/docs/device-management-ux.md
+/docs/grok-cage-upgrade.md
+/docs/home-network-draft.md
+/docs/live-device-control.md
+/docs/traffic-monitor.md
+/docs/zero-touch-device-onboarding-*.md

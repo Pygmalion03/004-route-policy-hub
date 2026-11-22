@@ -1,11 +1,13 @@
-# 连接管理部署记录
+# 连接管理历史部署记录（2026-10-18）
+
+> 此页记录当时的部署与验收，地址、域名和主机路径均已替换为示例，不代表当前环境。当前管理页面保持仅限 LAN 或 Tailscale；下文 Cloudflare 公网管理访问是历史状态，不能据此重新开放管理入口。
 
 - 源码分支：`codex/connection-management`。
 - 已部署镜像：`ghcr.io/pygmalion03/004-route-policy-hub:sha-3d317d0`（linux/amd64）。
-- NAS：沿用 `/M.2存储11/route-policy-hub`、私有数据目录与现有管理密码。
-- LAN 管理页面：`http://192.168.5.7:8787/connections`。
+- NAS：沿用 `/srv/route-policy-hub`、私有数据目录与现有管理密码。
+- LAN 管理页面：`http://192.168.50.10:8787/connections`。
 - 独立配置存于 `DATA_DIR/connections.json`，仅包含实际部署环境的数据，不纳入 Git。
-- 正式管理页面：`https://proxy.pygmalion.top/connections`，已发布至既有 Cloudflare Tunnel。
+- 正式管理页面：`https://hub.example.net/connections`，已发布至既有 Cloudflare Tunnel。
 - 用户已现场确认公网发布：管理页面使用现有 Only me；独立订阅令牌与只读规则无交互获取。
 - 官方 Clash Verge Rev 当前激活远程配置「日常 · 域名管理 · Webshare」，订阅来自上述域名；原本地日常配置保留供回退。
 - Clash 自动更新间隔为 1440 分钟；改参数后手动刷新。服务端机场缓存至少间隔一小时更新，页面的每小时提示指缓存刷新周期，不是此客户端的下载频率。
@@ -40,7 +42,7 @@
 - 正式订阅隔离测试中，把两个 Webshare 端点改为不可达后，请求失败，无其他出口。
 - 管理页发布截图保存在本机忽略目录 `outputs/connection-management-public.png`。
 
-## 日常操作
+## 当时的日常操作（历史）
 
 1. Clash 保持激活「日常 · 域名管理 · Webshare」。在「前置机场」选择机场，再到对应节点组选择地区；Webshare 最终出口保持固定。
 2. 换机场订阅或 Webshare IP / 端口 / 账号密码：打开正式连接管理页，填入官网对应参数，保存后在 Clash 刷新此日常订阅。密码留空保留现值。

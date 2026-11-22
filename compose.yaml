@@ -7,6 +7,12 @@ services:
       - "8787:3000"
     environment:
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
+      LAN_MANAGEMENT_HOST: "${LAN_MANAGEMENT_HOST:-}"
+      ZTE_ROUTER_URL: "${ZTE_ROUTER_URL:-}"
+      ZTE_ROUTER_USERNAME: "${ZTE_ROUTER_USERNAME:-}"
+      ZTE_ROUTER_PASSWORD: "${ZTE_ROUTER_PASSWORD:-}"
+      ZTE_ROUTER_CREDENTIALS_FILE: "${ZTE_ROUTER_CREDENTIALS_FILE:-}"
+      RPH_ONECLICK_ENABLED: "${RPH_ONECLICK_ENABLED:-0}"
       DATA_DIR: /app/data
     volumes:
       - ./data:/app/data

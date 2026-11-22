@@ -6,3 +6,30 @@ data
 npm-debug.log*
 pnpm-debug.log*
 .claude-workspaces
+
+# local releases, backups, state, and credentials are never image inputs
+outputs
+work
+.serena
+.vercel
+.wrangler
+**/.env*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/__pycache__
+**/*.py[cod]
+**/*.tsbuildinfo
+.DS_Store
+
+# private local notes are not part of the application image
+docs/NEXT-SESSION-HANDOFF-*.md
+docs/RPH-SPLIT-5G-AUTO-ONBOARDING-AUDIT-*.md
+docs/device-management-ux.md
+docs/grok-cage-upgrade.md
+docs/home-network-draft.md
+docs/live-device-control.md
+docs/traffic-monitor.md
+docs/zero-touch-device-onboarding-*.md
+docs/deployments/2026-10-18-connection-management.md

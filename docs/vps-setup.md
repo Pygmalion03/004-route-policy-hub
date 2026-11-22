@@ -1,4 +1,6 @@
-# 自建 VPS 与出口模式
+# 自建 VPS 与出口模式（历史方案）
+
+> 本文保留 2026 年 10 月的部署背景和验收记录，文中的路径为脱敏示例，不代表当前设备状态或日常操作方式。当前管理页面保持仅限 LAN 或 Tailscale；历史公网访问记录不构成新的公开部署授权。
 
 网站维护机场、VLESS REALITY / Hysteria2 节点及 Webshare 参数，Clash 手动决定实际使用方式。
 新增 VPS 不会自动切换电脑出口。没有可用代理节点前，仅有主机 IP 和 SSH 信息不能作为 Clash 节点。
@@ -21,7 +23,7 @@ Webshare 可粘贴官网 curl、HTTP / SOCKS5 URL 或 地址:端口:用户名:�
 Direct / Backbone 参数分别保留，发布时选定一个供两个 Webshare 方案共用。
 网站没有本机控制通道，不报告本机已应用或实测通过。
 
-## Mac 当前线路（2026-10-19）
+## Mac 历史线路（2026-10-19）
 
 Mac 日常已切换至 Hysteria2，原 VLESS REALITY / Vision 保留为手动备用。Claude 的专用 VLESS 配置独立保留，UU、荣耀、局域网、Tailscale 和手动直连规则保持不变。
 部署、验证和切回方式见 [切换记录](deployments/2026-10-19-hysteria2-cutover.md)。下方 10 月 18 日数据为历史验收。
@@ -45,7 +47,7 @@ python3 scripts/vps-bootstrap.py --host VPS_IP --ssh-port 61234 --output data/le
 密码库界面填写；需要解锁时在用户 Terminal 运行现有解锁工具。
 
 ```sh
-/Users/pygmalion/Documents/Codex/Projects/008-bitwarden-codex/bw-codex run \
+/path/to/bitwarden-helper/bw-codex run \
   scripts/legend-bitwarden.example.json -- \
   python3 scripts/vps-bootstrap.py --output data/legend-vps --deploy
 ```
@@ -66,7 +68,7 @@ python3 scripts/vps-bootstrap.py --host VPS_IP --ssh-port 61234 --output data/le
 3. 对所选模式制造测试故障，确认请求失败且没有自动改走其他出口。
 4. 验证后才切换日常连接；保留原订阅和当前机场节点作为手动恢复路径。
 
-## 本次部署与验收（2026-10-18）
+## 历史部署与验收（2026-10-18）
 
 已通过密码库 `legend-vps` 登录并核对服务器身份，安装官方 Xray 服务。
 REALITY 的 Microsoft 目标在本次环境下导致握手失败；更换为 Apple 目标后真实请求成功，
