@@ -186,7 +186,17 @@ test('host unavailability is distinct from an available empty list; invalid stat
  try {
   assert.equal((await getOneClickSnapshot()).available,false);
   payload={ok:true,states:[]};
-  assert.deepEqual(await getOneClickSnapshot(),{available:true,states:[],reason:null});
+  const noProof=await getOneClickSnapshot();
+  assert.equal(noProof.available,true);
+  assert.deepEqual(noProof.states,[]);
+  assert.equal(noProof.strict.available,false,'legacy host has no strict attestation');
+  payload={ok:true,states:[],strict:{available:true,reason:null}};
+  const attested=await getOneClickSnapshot();
+  assert.equal(attested.strict.available,true,'only an explicit host attestation enables strict');
+  payload={ok:true,states:[],strict:{available:'true',reason:null}};
+  const invalidProof=await getOneClickSnapshot();
+  assert.equal(invalidProof.available,true,'a bad LA claim cannot disable SG status');
+  assert.equal(invalidProof.strict.available,false,'invalid host proof fails closed for LA');
   const valid={managedMac:device.mac,managedIp:device.ip,activePlan:'flex',status:'active',
    appliedRevision:null,appliedAt:null,reason:null,phase:'active'};
   payload={ok:true,states:[{...valid,unexpected:'not returned'}]};

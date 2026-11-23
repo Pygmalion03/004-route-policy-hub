@@ -10,6 +10,7 @@ import { changeOneClickPlan, createOneClickAgent, getOneClickSnapshot } from '@/
 import { serializeZteSession, withZteLogin } from '@/lib/zte-router-admin';
 import { parseZteBindings } from '@/lib/zte-oneclick-binding';
 import { readOneClickNetworkConfig } from '@/lib/oneclick-network-config';
+import { strictEligibility } from '@/lib/oneclick-strict-eligibility';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -47,13 +48,8 @@ export async function POST(request:Request) {
     return fail('请只指定设备 MAC 和目标上网方案',400);
   }
   const plan=body.plan as DevicePlan;
-  // Router DHCP on a shared subnet can send DNS directly to the main router.
-  // Until DNS/IPv6 fail-closed is verified for new clients, never touch the
-  // router or host when the selected plan promises a strict LA exit.
-  if (plan === 'strict') return fail(
-    '新设备严格 LA 的 DNS/IPv6 防绕行尚未验收；未修改网关或线路。已有已授权设备不受影响。',
-    409,
-  );
+  // Strict LA is a privileged, network-wide capability. A Web request cannot
+  // enable it: the Q4 host must independently attest and enforce isolation.
   try {
     const [snapshot,controllers,oneClickSnapshot]=await Promise.all([
       getLanSnapshot(),getRuntimeStatuses(),getOneClickSnapshot(),
@@ -61,10 +57,18 @@ export async function POST(request:Request) {
     if (controllers.some(controller=>controller.available && controller.managedMac===body.mac)) {
       return fail('此设备已由原共享控制器管理，请直接使用原有的线路选择',409);
     }
+    if (plan==='strict' && !oneClickSnapshot.strict.available) {
+      return fail(oneClickSnapshot.strict.reason || '新设备严格 LA 尚未验收',409);
+    }
     if (!oneClickSnapshot.available) {
       return fail('Q4 自动接入控制器暂不可用，未修改设备线路',503);
     }
     const network=await readOneClickNetworkConfig();
+    if(plan==='strict') {
+      const candidate=snapshot.devices.find(item=>item.mac===body.mac);
+      const check=strictEligibility(oneClickSnapshot.strict,network.wifiInterfaceAlias,candidate?.wifiInterfaceAlias);
+      if(!check.available)return fail(check.reason || 'LA 安全验收未通过；未修改线路',409);
+    }
     const alreadyManaged=oneClickSnapshot.states.find(state=>state.managedMac===body.mac);
     if (alreadyManaged && alreadyManaged.phase === 'active') {
       await changeOneClickPlan(alreadyManaged.managedMac,alreadyManaged.managedIp,plan);

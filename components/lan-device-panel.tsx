@@ -18,7 +18,7 @@ type Selection = {
 type Device = LanDevice & {
   selection: Selection | null;
   initialDefaultPlan?: 'direct';
-  capabilities?: { canSwitch: boolean; canEnroll: boolean; supportsStrict: boolean; reason: string | null };
+  capabilities?: { canSwitch: boolean; canEnroll: boolean; supportsStrict: boolean; strictReason?: string | null; reason: string | null };
   oneClickPhase?: 'prepared' | 'active' | 'fallback-direct' | null;
 };
 type View = Omit<LanSnapshot, 'devices'> & {
@@ -337,7 +337,7 @@ export function LanDevicePanel() {
                 <option value="strict" disabled={!strictSupported}>{plans.strict}{strictSupported ? '' : '（暂未开放）'}</option>
               </select>
               {!capable && device.capabilities?.reason && <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{device.capabilities.reason}</p>}
-              {capable && !strictSupported && <p className="mt-1.5 text-xs text-muted-foreground">支持 SG 与直连</p>}
+              {capable && !strictSupported && <p className="mt-1.5 text-xs text-muted-foreground">支持 SG 与直连；LA：{device.capabilities?.strictReason || '尚未通过严格出口验收'}</p>}
               {automatic && capable && device.oneClickPhase === 'fallback-direct' && <Button className="mt-2" size="sm" variant="outline" disabled={!!pending || !!error} onClick={() => void save(device, 'flex')}>重试新加坡接入</Button>}
               {retry && <Button className="mt-2" size="sm" variant="outline" disabled={!!pending || !!error || host?.status === 'failed'} onClick={() => void apply(device)}>重试应用已选线路</Button>}
             </div>

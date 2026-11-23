@@ -5,6 +5,7 @@ import { getRuntimeStatuses } from '@/lib/device-runtime-control';
 import { getOneClickSnapshot } from '@/lib/q4-oneclick-agent';
 import { validateDirectCandidate } from '@/lib/direct-onboarding';
 import { isAllowedOneClickIp, readOneClickNetworkConfig } from '@/lib/oneclick-network-config';
+import { strictEligibility } from '@/lib/oneclick-strict-eligibility';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -53,36 +54,45 @@ export async function GET(request: Request) {
       if (!current.has(item.mac)) current.set(item.mac, { mac: item.mac, name: item.name, ip: '', online: null, link: '' });
     }
     const controlledMacs = new Set(allControllers.filter(host => host.available).map(host => host.managedMac));
+    const strictStatus = (device: typeof snapshot.devices[number]) =>
+      strictEligibility(oneClickSnapshot.strict, network?.wifiInterfaceAlias, device.wifiInterfaceAlias);
     const capabilities = (device: typeof snapshot.devices[number]) => {
       const legacy = controllers.find(host => host.available && host.managedMac === device.mac);
       if (legacy?.available) return {
-        canSwitch: legacy.status !== 'failed', canEnroll: false, supportsStrict: true,
+        canSwitch: legacy.status !== 'failed', canEnroll: false, supportsStrict: true, strictReason: null,
         reason: legacy.status === 'failed' ? '网关状态异常，请查看详情' : null,
       };
       const dynamic = oneClick.find(host => host.managedMac === device.mac);
       if (!network || !oneClickSnapshot.available) return {
         canSwitch: false, canEnroll: false, supportsStrict: false,
+        strictReason: strictStatus(device).reason,
         reason: !network ? '自动接入配置暂不可用' : oneClickSnapshot.reason,
       };
       if (dynamic && !isAllowedOneClickIp(dynamic.managedIp, network)) return {
         canSwitch: false, canEnroll: false, supportsStrict: false,
+        strictReason: '设备不在允许的网关管理范围',
         reason: '此设备不在当前允许管理的网络范围',
       };
       if (dynamic?.phase === 'active') return {
-        canSwitch: true, canEnroll: false, supportsStrict: false, reason: null,
+        canSwitch: true, canEnroll: false,
+        supportsStrict: strictStatus(device).available,
+        strictReason: strictStatus(device).reason, reason: null,
       };
       try {
         // Prepared/fallback entries must re-qualify before an enrollment retry.
         const protectedMacs = new Set(controlledMacs);
         if (dynamic) protectedMacs.delete(dynamic.managedMac);
         validateDirectCandidate(snapshot, device.mac, device.ip, protectedMacs, true, network);
-        return { canSwitch: true, canEnroll: !dynamic, supportsStrict: false, reason: null };
+        return { canSwitch: true, canEnroll: !dynamic,
+          supportsStrict: strictStatus(device).available,
+          strictReason: strictStatus(device).reason, reason: null };
       } catch {
         const reason = device.online !== true ? '设备在线后可重新检查' :
           /有线|ethernet/i.test(device.link) ? '保持现有有线网络' :
           device.wifiInterfaceAlias && device.wifiInterfaceAlias !== network.wifiInterfaceAlias ? '连接专用 Wi-Fi 后可切换' :
           '此设备暂不支持自动接入';
-        return { canSwitch: false, canEnroll: false, supportsStrict: false, reason };
+        return { canSwitch: false, canEnroll: false, supportsStrict: false,
+          strictReason: strictStatus(device).reason, reason };
       }
     };
     return Response.json({

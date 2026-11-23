@@ -86,7 +86,7 @@ export function HomeNetworkConsole() {
           </summary>
           <div className="mt-5 space-y-6 border-t pt-5"><HomePolicyPanel store={policy} setStore={setPolicy} nodes={view.nodes} /></div>
         </details>
-        <p className="px-1 text-xs leading-6 text-muted-foreground">新设备目前支持新加坡分流与家庭宽带直连；洛杉矶固定出口仅向已支持的设备开放。</p>
+        <p className="px-1 text-xs leading-6 text-muted-foreground">新设备可选择直连与新加坡分流；严格 LA 仅在 Q4 已验证专用 Wi-Fi 的 DNS、IPv6 与故障防绕行后开放。</p>
       </>}
     </div>
   </main>;

@@ -14,7 +14,7 @@
     "test:home-network:http": "node scripts/test-home-network-http.cjs",
     "export:home-network": "node scripts/export-home-network.cjs",
     "format": "oxfmt",
-    "test:devices": "node --test scripts/test-device-runtime-control.cjs scripts/test-direct-onboarding.cjs scripts/test-lan-devices.cjs scripts/test-one-click-device-activation.cjs scripts/test-oneclick-network-config.cjs scripts/test-oneclick-network-binding.cjs scripts/test-zte-oneclick-binding.cjs scripts/test-zte-session-post.cjs",
+    "test:devices": "node --test scripts/test-device-runtime-control.cjs scripts/test-direct-onboarding.cjs scripts/test-lan-devices.cjs scripts/test-one-click-device-activation.cjs scripts/test-oneclick-network-config.cjs scripts/test-oneclick-strict-eligibility.cjs scripts/test-oneclick-network-binding.cjs scripts/test-zte-oneclick-binding.cjs scripts/test-zte-session-post.cjs",
     "test:devices:http": "node scripts/test-oneclick-http.cjs"
   },
   "dependencies": {

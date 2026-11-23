@@ -8,7 +8,7 @@ import type { ActivationAgent, SingleDevice } from './one-click-device-activatio
 import { createZteBindingTransaction } from './zte-oneclick-binding';
 import { isAllowedOneClickIp, readOneClickNetworkConfig, type OneClickNetworkConfig } from './oneclick-network-config';
 
-type HostReply = { ok: boolean; ticket?: string; error?: string; states?: unknown };
+type HostReply = { ok: boolean; ticket?: string; error?: string; states?: unknown; strict?: unknown };
 type HostMessage =
   | { op: 'prepare'; mac: string; ip: string; plan: 'direct' }
   | { op: 'activate'; ticket: string; plan: DevicePlan }
@@ -65,11 +65,33 @@ export type OneClickState = {
   phase: 'prepared' | 'active' | 'fallback-direct';
 };
 
+export type StrictReadiness = { available: boolean; reason: string | null };
 export type OneClickSnapshot = {
   available: boolean;
   states: OneClickState[];
   reason: string | null;
+  // Only the privileged Q4 controller can attest to network-level strict isolation.
+  strict: StrictReadiness;
 };
+
+const STRICT_UNVERIFIED: StrictReadiness = {
+  available: false,
+  reason: '专用 Wi-Fi 的 DNS、IPv6 与线路故障防绕行尚未验收',
+};
+
+function parseStrictReadiness(value: unknown): StrictReadiness {
+  if (value === undefined) return STRICT_UNVERIFIED; // Old Q4 controller: fail closed.
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Q4 严格出口能力响应无效');
+  const candidate = value as Record<string, unknown>;
+  if (Object.keys(candidate).sort().join(',') !== 'available,reason' ||
+      typeof candidate.available !== 'boolean' ||
+      !(candidate.reason === null || (typeof candidate.reason === 'string' && candidate.reason.length <= 180)) ||
+      (candidate.available && candidate.reason !== null)) {
+    throw new Error('Q4 严格出口能力响应无效');
+  }
+  return { available: candidate.available, reason: candidate.reason as string | null };
+}
 
 function validateOneClickState(value: unknown): OneClickState {
   if (!value || typeof value !== 'object') throw new Error('控制器状态格式无效');
@@ -95,7 +117,7 @@ function validateOneClickState(value: unknown): OneClickState {
 
 export async function getOneClickSnapshot(): Promise<OneClickSnapshot> {
   if (process.env.RPH_ONECLICK_ENABLED !== '1') {
-    return { available: false, states: [], reason: '自动接入控制器未启用' };
+    return { available: false, states: [], reason: '自动接入控制器未启用', strict: STRICT_UNVERIFIED };
   }
   try {
     const result = await callHost({ op: 'status' });
@@ -103,9 +125,12 @@ export async function getOneClickSnapshot(): Promise<OneClickSnapshot> {
     const states = result.states.map(validateOneClickState);
     if (new Set(states.map(state => state.managedMac)).size !== states.length ||
       new Set(states.map(state => state.managedIp)).size !== states.length) throw new Error('设备身份冲突');
-    return { available: true, states, reason: null };
+    // A malformed optional strict claim must disable LA, not SG or DIRECT.
+    let strict = STRICT_UNVERIFIED;
+    try { strict = parseStrictReadiness(result.strict); } catch { /* strict remains unavailable */ }
+    return { available: true, states, reason: null, strict };
   } catch {
-    return { available: false, states: [], reason: '自动接入控制器暂不可用，请稍后刷新' };
+    return { available: false, states: [], reason: '自动接入控制器暂不可用，请稍后刷新', strict: STRICT_UNVERIFIED };
   }
 }
 
